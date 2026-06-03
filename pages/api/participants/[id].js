@@ -7,8 +7,8 @@ export default async function handler(req, res) {
   if (!session) return res.status(401).json({ error: 'Unauthorized' })
 
   const db = getSupabaseAdmin()
-  const userId = session.user.id
-  const { id } = req.query
+const userId = session.user?.email
+const { id } = req.query
 
   if (req.method === 'PUT') {
     const body = req.body
