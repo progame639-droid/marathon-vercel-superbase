@@ -651,9 +651,8 @@ export default function Home() {
   const [confirmTarget, setConfirmTarget] = useState(null)
 
   useEffect(() => {
-    if (status === 'authenticated') fetchParticipants()
-  }, [status])
-
+  fetchParticipants()
+}, [])
   const fetchParticipants = async () => {
     setLoading(true)
     try {
