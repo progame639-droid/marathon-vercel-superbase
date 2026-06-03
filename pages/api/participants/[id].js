@@ -15,17 +15,9 @@ const { id } = req.query
     const { data, error } = await db
       .from('participants')
       .update({
-        email: body.email,
-        name: body.name,
-        surname: body.surname,
-        gender: body.gender,
-        role: body.role,
-        country: body.country,
-        dob: body.dob || null,
-        bmi: body.bmi || null,
-        photo: body.photo || null,
-        updated_at: new Date().toISOString(),
-      })
+  bmi: body.bmi,
+  updated_at: new Date().toISOString(),
+})
       .eq('id', id)
       .eq('owner_id', userId)
       .select()
