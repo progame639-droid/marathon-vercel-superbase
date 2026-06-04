@@ -744,7 +744,7 @@ export default function Home() {
 
           {/* Telegram Banner */}
           <a
-            href="https://t.me/marathon_skills_bot"
+            href="https://t.me/martthon_bot"
             target="_blank"
             rel="noopener noreferrer"
             style={{
@@ -885,7 +885,7 @@ export default function Home() {
 
         {/* Telegram Banner */}
         <a
-          href="https://t.me/marathon_skills_bot"
+          href="https://t.me/martthon_bot"
           target="_blank"
           rel="noopener noreferrer"
           style={{
