@@ -26,7 +26,6 @@ export default async function handler(req, res) {
       const { data, error } = await db
         .from('participants')
         .select('*')
-        .eq('owner_id', userId)
         .order('created_at', { ascending: false })
 
       if (error) {
