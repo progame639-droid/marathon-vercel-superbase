@@ -7,11 +7,10 @@ export default async function handler(req, res) {
   if (!session) return res.status(401).json({ error: 'Unauthorized' })
 
   const db = getSupabaseAdmin()
-  const userId = session.user.id
   const { id } = req.query
 
   if (req.method === 'PUT') {
-    const body = req.body
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body
     const { data, error } = await db
       .from('participants')
       .update({
@@ -27,7 +26,6 @@ export default async function handler(req, res) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
-      .eq('owner_id', userId)
       .select()
       .single()
 
@@ -40,7 +38,6 @@ export default async function handler(req, res) {
       .from('participants')
       .delete()
       .eq('id', id)
-      .eq('owner_id', userId)
 
     if (error) return res.status(500).json({ error: error.message })
     return res.status(200).json({ success: true })
