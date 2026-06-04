@@ -1,4 +1,8 @@
 // pages/api/participants/[id].js
+//
+// GET    — публичный (карточка участника)
+// PUT    — авторизация обязательна
+// DELETE — авторизация обязательна
 
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
@@ -19,39 +23,7 @@ async function getUserEmail(req, res) {
   return null;
 }
 
-function mapParticipant(p) {
-  return {
-    id: p.id,
-    name: p.name || "",
-    surname: p.surname || "",
-    email: p.email || "",
-    gender: p.gender || "",
-    role: p.role || "",
-    country: p.country || "",
-    dob: p.dob || null,
-    bmi: p.bmi || null,
-    photo: p.photo || null,
-    created_at: p.created_at,
-    // мобильное приложение
-    firstName: p.name || "",
-    lastName: p.surname || "",
-    phone: p.phone || "",
-    city: p.city || "",
-    age: p.age || 0,
-    distance: p.role || "",
-    tShirtSize: p.tshirt_size || null,
-    photoUrl: p.photo || null,
-    registrationDate: p.created_at || new Date().toISOString(),
-    bibNumber: String(p.bib_number || p.id).padStart(3, "0"),
-  };
-}
-
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, PUT, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  if (req.method === "OPTIONS") return res.status(200).end();
-
   const { id } = req.query;
   const db = getSupabaseAdmin();
 
@@ -64,7 +36,23 @@ export default async function handler(req, res) {
       .single();
 
     if (error || !data) return res.status(404).json({ error: "Not found" });
-    return res.status(200).json(mapParticipant(data));
+
+    return res.status(200).json({
+      id: data.id,
+      firstName: data.name || "",
+      lastName: data.surname || "",
+      email: data.email || "",
+      phone: data.phone || "",
+      country: data.country || "",
+      city: data.city || "",
+      age: data.age || 0,
+      gender: data.gender || "",
+      distance: data.role || "",
+      tShirtSize: data.tshirt_size || null,
+      photoUrl: data.photo || null,
+      registrationDate: data.created_at || new Date().toISOString(),
+      bibNumber: String(data.bib_number || data.id).padStart(3, "0"),
+    });
   }
 
   // PUT / DELETE — только авторизованным
@@ -85,10 +73,6 @@ export default async function handler(req, res) {
         country: body.country,
         city: body.city || null,
         age: body.age || null,
-        dob: body.dob || null,
-        bmi: body.bmi || null,
-        photo: body.photoUrl || body.photo || null,
-        phone: body.phone || null,
         tshirt_size: body.tShirtSize || null,
       })
       .eq("id", id)
@@ -96,8 +80,7 @@ export default async function handler(req, res) {
       .single();
 
     if (error) return res.status(500).json({ error: error.message });
-    // ❗ ИСПРАВЛЕНИЕ: возвращаем { success, data }
-    return res.status(200).json({ success: true, data: mapParticipant(data) });
+    return res.status(200).json({ success: true, data });
   }
 
   if (req.method === "DELETE") {
