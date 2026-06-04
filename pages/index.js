@@ -1,4 +1,4 @@
-import { useSession, signOut } from 'next-auth/react'
+import { useSession, signOut, signIn } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import Image from 'next/image'
@@ -138,25 +138,44 @@ function Navbar({ onUsers, onRegister, onAdminLogin, session, isAdmin, onAdminLo
         </div>
       </div>
       <div style={{marginLeft:'auto',display:'flex',gap:8,alignItems:'center'}}>
-        {isAdmin && <span style={{background:'#2D1F00',border:'1px solid #E85D04',borderRadius:4,padding:'3px 8px',fontSize:9,fontWeight:700,color:'#E85D04'}}>🔑 АДМИНИСТРАТОР</span>}
-        {session?.user && (
-          <div style={{display:'flex',alignItems:'center',gap:8}}>
-            {session.user.image && (
-              <img src={session.user.image} alt="" width={28} height={28}
-                style={{borderRadius:'50%',border:'2px solid #E85D04'}} />
-            )}
-            <span style={{fontSize:10,color:'#E8E8F5',maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-              {session.user.name?.split(' ')[0]}
-            </span>
-          </div>
+        {session?.user ? (
+          <>
+            {isAdmin && <span style={{background:'#2D1F00',border:'1px solid #E85D04',borderRadius:4,padding:'3px 8px',fontSize:9,fontWeight:700,color:'#E85D04'}}>🔑 АДМИНИСТРАТОР</span>}
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              {session.user.image && (
+                <img src={session.user.image} alt="" width={28} height={28}
+                  style={{borderRadius:'50%',border:'2px solid #E85D04'}} />
+              )}
+              <span style={{fontSize:10,color:'#E8E8F5',maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                {session.user.name?.split(' ')[0]}
+              </span>
+            </div>
+            <button style={btnNav} onClick={onUsers}>👥 &nbsp;Участники</button>
+            <button style={btnOrange} onClick={onRegister}>✚ &nbsp;Регистрация</button>
+            {isAdmin
+              ? <button style={{...btnNav,color:'#F4A33C'}} onClick={onAdminLogout}>🚪 &nbsp;Выйти из адм.</button>
+              : <button style={btnNav} onClick={onAdminLogin}>🔒 &nbsp;Админ</button>
+            }
+            <button style={{...btnNav,color:'#8C8CA5'}} onClick={() => signOut({callbackUrl:'/'})}>⏻</button>
+          </>
+        ) : (
+          <button
+            onClick={() => signIn('google', { callbackUrl: '/' })}
+            style={{
+              display:'inline-flex', alignItems:'center', gap:8,
+              background:'#fff', color:'#1a1a2e', border:'none', borderRadius:6,
+              padding:'7px 16px', fontSize:12, fontWeight:600, cursor:'pointer',
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 48 48">
+              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+            </svg>
+            Войти через Google
+          </button>
         )}
-        <button style={btnNav} onClick={onUsers}>👥 &nbsp;Участники</button>
-        <button style={btnOrange} onClick={onRegister}>✚ &nbsp;Регистрация</button>
-        {isAdmin
-          ? <button style={{...btnNav,color:'#F4A33C'}} onClick={onAdminLogout}>🚪 &nbsp;Выйти из адм.</button>
-          : <button style={btnNav} onClick={onAdminLogin}>🔒 &nbsp;Админ</button>
-        }
-        <button style={{...btnNav,color:'#8C8CA5'}} onClick={() => signOut({callbackUrl:'/login'})}>⏻</button>
       </div>
     </nav>
   )
@@ -621,10 +640,6 @@ export default function Home() {
   const [confirmTarget, setConfirmTarget] = useState(null)
 
   useEffect(() => {
-    if (status === 'unauthenticated') router.replace('/login')
-  }, [status, router])
-
-  useEffect(() => {
     if (status === 'authenticated') fetchParticipants()
   }, [status])
 
@@ -689,7 +704,66 @@ export default function Home() {
   })()
 
   if (status === 'loading') return <div style={{background:'#14142A',color:'#E8E8F5',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}>Загрузка...</div>
-  if (!session) return null
+
+  // ── PUBLIC LANDING (not logged in) ──────────────────────────────
+  if (!session) {
+    return (
+      <div style={{display:'flex',flexDirection:'column',minHeight:'100vh',background:'#14142A',fontFamily:"'Segoe UI', system-ui, sans-serif",color:'#E8E8F5'}}>
+        <Navbar session={null} isAdmin={false} onUsers={()=>{}} onRegister={()=>{}} onAdminLogin={()=>{}} onAdminLogout={()=>{}}/>
+
+        {/* Hero */}
+        <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'40px 24px',textAlign:'center'}}>
+          <div style={{fontSize:64,marginBottom:16}}>🏃</div>
+          <div style={{fontSize:32,fontWeight:800,marginBottom:8,letterSpacing:1}}>MARATHON SKILLS</div>
+          <div style={{fontSize:16,color:'#E85D04',fontWeight:700,marginBottom:8}}>2026</div>
+          <div style={{fontSize:14,color:'#8C8CA5',marginBottom:4}}>42.195 КМ · 15 ИЮНЯ 2026 · АЛМАТЫ</div>
+          <div style={{fontSize:12,color:'#8C8CA5',marginBottom:40}}>Войдите через Google, чтобы зарегистрироваться на марафон или управлять участниками</div>
+
+          {/* Google Sign In */}
+          <button
+            onClick={() => signIn('google', { callbackUrl: '/' })}
+            style={{
+              display:'inline-flex', alignItems:'center', gap:12,
+              background:'#fff', color:'#1a1a2e', border:'none', borderRadius:8,
+              padding:'14px 32px', fontSize:15, fontWeight:600, cursor:'pointer',
+              boxShadow:'0 4px 20px rgba(0,0,0,0.4)', marginBottom:48,
+              transition:'.15s',
+            }}
+            onMouseOver={e=>e.currentTarget.style.background='#f0f0f0'}
+            onMouseOut={e=>e.currentTarget.style.background='#fff'}
+          >
+            <svg width="22" height="22" viewBox="0 0 48 48">
+              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+              <path fill="none" d="M0 0h48v48H0z"/>
+            </svg>
+            Войти через Google
+          </button>
+
+          {/* Info cards */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:12,maxWidth:700,width:'100%'}}>
+            {[
+              ['#E85D04','🏃 Марафон — испытание воли','Дистанция 42,195 км объединяет профессионалов и любителей в едином порыве выносливости.'],
+              ['#2196F3','💪 «Стена» на 30–35 км','В этот момент запасы гликогена истощаются. Преодоление — вопрос чистого упрямства.'],
+              ['#4CAF50','🌆 Города без машин','Уникальный шанс увидеть город иначе: пробежать по мостам под крики болельщиков.'],
+            ].map(([color,title,desc])=>(
+              <div key={title} style={{display:'flex',alignItems:'stretch',background:'#1E1E36',border:'1px solid #28283E',borderRadius:8,overflow:'hidden',textAlign:'left'}}>
+                <div style={{width:4,flexShrink:0,background:color}}/>
+                <div style={{padding:'12px 14px'}}>
+                  <div style={{fontSize:12,fontWeight:700,marginBottom:4}}>{title}</div>
+                  <div style={{fontSize:10,color:'#8C8CA5',lineHeight:1.5}}>{desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <TimerBar/>
+      </div>
+    )
+  }
 
   // ── BMI VIEW ────────────────────────────────────────────────────
   if (view === 'bmi') {

@@ -1,50 +1,80 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]";
-import { getSupabaseAdmin } from "../../../lib/supabase";
-
-async function getUserEmail(req, res) {
-  const session = await getServerSession(req, res, authOptions);
-  if (session?.user?.email) return session.user.email;
-  return null;
-}
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '../auth/[...nextauth]'
+import { getSupabaseAdmin } from '../../../lib/supabase'
 
 export default async function handler(req, res) {
   try {
-    const db = getSupabaseAdmin();
+    const session = await getServerSession(req, res, authOptions)
 
-    if (req.method === "GET") {
-      const search = req.query.search || "";
-      let query = db.from("participants").select("*").order("created_at", { ascending: false });
-      if (search) {
-        query = query.or(`name.ilike.%${search}%,surname.ilike.%${search}%,email.ilike.%${search}%`);
+    if (!session) {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+
+    const db = getSupabaseAdmin()
+
+    // 🔥 СТАБИЛЬНЫЙ userId (email вместо id)
+    const userId = session.user?.email
+
+    if (!userId) {
+      return res.status(400).json({ error: 'No user email in session' })
+    }
+
+    // ======================
+    // GET PARTICIPANTS
+    // ======================
+    if (req.method === 'GET') {
+      const { data, error } = await db
+        .from('participants')
+        .select('*')
+        .eq('owner_id', userId)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('GET ERROR:', error)
+        return res.status(500).json({ error: error.message })
       }
-      const { data, error } = await query;
-      if (error) return res.status(500).json({ error: error.message });
-      return res.status(200).json(data || []);
+
+      return res.status(200).json(data)
     }
 
-    const userEmail = await getUserEmail(req, res);
-    if (!userEmail) return res.status(401).json({ error: "Unauthorized" });
+    // ======================
+    // CREATE PARTICIPANT
+    // ======================
+    if (req.method === 'POST') {
+      const body =
+        typeof req.body === 'string'
+          ? JSON.parse(req.body)
+          : req.body
 
-    if (req.method === "POST") {
-      const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
-      const { data, error } = await db.from("participants").insert({
-        owner_id: userEmail,
-        email: body.email,
-        name: body.name,
-        surname: body.surname,
-        gender: body.gender,
-        role: body.role,
-        country: body.country,
-        dob: body.dob || null,
-        photo: body.photo || null,
-      }).select().single();
-      if (error) return res.status(500).json({ error: error.message });
-      return res.status(201).json({ success: true, data });
+      const { data, error } = await db
+        .from('participants')
+        .insert({
+          owner_id: userId,
+          email: body.email,
+          name: body.name,
+          surname: body.surname,
+          gender: body.gender,
+          role: body.role,
+          country: body.country,
+          dob: body.dob || null,
+          bmi: body.bmi || null,
+          photo: body.photo || null,
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('POST ERROR:', error)
+        return res.status(500).json({ error: error.message })
+      }
+
+      return res.status(201).json(data)
     }
 
-    return res.status(405).json({ error: "Method not allowed" });
+    return res.status(405).json({ error: 'Method not allowed' })
+
   } catch (err) {
-    return res.status(500).json({ error: "Internal server error" });
+    console.error('SERVER ERROR:', err)
+    return res.status(500).json({ error: 'Internal server error' })
   }
 }
