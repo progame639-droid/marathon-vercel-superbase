@@ -651,8 +651,8 @@ export default function Home() {
   const [confirmTarget, setConfirmTarget] = useState(null)
 
   useEffect(() => {
-    if (status === 'authenticated') fetchParticipants()
-  }, [status])
+    fetchParticipants()
+  }, [])
 
   const fetchParticipants = async () => {
     setLoading(true)
@@ -670,16 +670,24 @@ export default function Home() {
         method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
       })
       if (res.ok) {
-        const updated = await res.json()
-        setParticipants(ps => ps.map(p => p.id===id ? updated : p))
+        await fetchParticipants()
+      } else {
+        const err = await res.json()
+        console.error('PUT error:', err)
       }
     } else {
       const res = await fetch('/api/participants', {
         method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
       })
       if (res.ok) {
-        const created = await res.json()
+        const json = await res.json()
+        const created = json.data || json
         setParticipants(ps => [created, ...ps])
+        await fetchParticipants()
+      } else {
+        const err = await res.json()
+        console.error('POST error:', err)
+        alert('Ошибка при регистрации: ' + (err.error || err.message || 'неизвестная ошибка'))
       }
     }
   }
@@ -697,8 +705,7 @@ export default function Home() {
       body:JSON.stringify({...bmiTarget, bmi: bmiVal})
     })
     if (res.ok) {
-      const updated = await res.json()
-      setParticipants(ps => ps.map(p => p.id===bmiTarget.id ? updated : p))
+      await fetchParticipants()
     }
     setBmiTarget(null)
     setView('users')
