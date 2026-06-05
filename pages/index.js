@@ -2,6 +2,7 @@ import { useSession, signOut, signIn } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import Image from 'next/image'
+import { QRCodeSVG } from 'qrcode.react'
 
 const COUNTRIES = [
   'Казахстан','Россия','США','Германия','Франция','Великобритания','Китай','Япония',
@@ -370,11 +371,9 @@ function ProfileModal({ open, onClose, participant, isAdmin, onEdit, onBMI }) {
               </div>
             ))}
           </div>
-          {isAdmin && (
-            <div style={{display:'flex',gap:10,justifyContent:'center'}}>
+          <div style={{display:'flex',gap:10,justifyContent:'center'}}>
               <button style={{...btnOrange,height:36}} onClick={()=>onBMI(p)}>📊 &nbsp;Рассчитать ИМТ</button>
             </div>
-          )}
         </div>
       </div>
     </div>
@@ -878,41 +877,60 @@ export default function Home() {
         </div>
 
         {/* Quick buttons */}
-        <div style={{display:'flex',gap:10,justifyContent:'center',marginBottom:16}}>
-          <button style={{...btnOrange,height:40,fontSize:12}} onClick={()=>{setEditTarget(null);setRegisterOpen(true)}}>✚ &nbsp;Зарегистрировать</button>
+        <div style={{display:'flex',gap:10,justifyContent:'center',marginBottom:16}}>\n          <button style={{...btnOrange,height:40,fontSize:12}} onClick={()=>{setEditTarget(null);setRegisterOpen(true)}}>✚ &nbsp;Зарегистрировать</button>
           <button style={{...btnNav,height:40,fontSize:12}} onClick={()=>setView('users')}>👥 &nbsp;Все участники</button>
         </div>
 
-        {/* Telegram Banner */}
-        <a
-          href="https://t.me/martthon_bot"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display:'flex', alignItems:'center', gap:14,
-            background:'linear-gradient(135deg,#0d1f3c 0%,#1a3a5c 100%)',
-            border:'1px solid #2196F3', borderRadius:10, padding:'14px 18px',
-            marginBottom:12, textDecoration:'none', cursor:'pointer',
-          }}
-        >
+        {/* QR + Telegram row */}
+        <div style={{display:'flex',gap:10,marginBottom:12}}>
+
+          {/* QR Banner */}
           <div style={{
-            width:44, height:44, borderRadius:'50%', flexShrink:0,
-            background:'#2196F3', display:'flex', alignItems:'center',
-            justifyContent:'center', fontSize:22,
-          }}>✈️</div>
-          <div style={{flex:1}}>
-            <div style={{fontSize:13,fontWeight:700,color:'#E8E8F5',marginBottom:3}}>
-              Есть вопросы? Спроси бота в Telegram
+            flex:1, background:'linear-gradient(135deg,#1a1a2e 0%,#2d1f00 100%)',
+            border:'1px solid #E85D04', borderRadius:10, padding:'14px 18px',
+            display:'flex', alignItems:'center', gap:14,
+          }}>
+            <div style={{flexShrink:0}}>
+              <QRCodeSVG value="https://marathon-vercel-superbase.vercel.app" size={64} bgColor="transparent" fgColor="#E85D04"/>
             </div>
-            <div style={{fontSize:10,color:'#8C8CA5'}}>
-              Найди участника по имени или фамилии · Узнай как зарегистрироваться
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:'#E8E8F5',marginBottom:3}}>
+                📱 QR-код для регистрации
+              </div>
+              <div style={{fontSize:10,color:'#8C8CA5',marginBottom:6}}>
+                Отсканируй камерой телефона — откроется сайт марафона
+              </div>
+              <div style={{fontSize:9,color:'#E85D04'}}>marathon-vercel-superbase.vercel.app</div>
             </div>
           </div>
-          <div style={{
-            background:'#2196F3', color:'#fff', borderRadius:6,
-            padding:'6px 14px', fontSize:11, fontWeight:700, flexShrink:0,
-          }}>Открыть →</div>
-        </a>
+
+          {/* Telegram Banner */}
+          <a
+            href="https://t.me/martthon_bot"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              flex:1, display:'flex', alignItems:'center', gap:14,
+              background:'linear-gradient(135deg,#0d1f3c 0%,#1a3a5c 100%)',
+              border:'1px solid #2196F3', borderRadius:10, padding:'14px 18px',
+              textDecoration:'none', cursor:'pointer',
+            }}
+          >
+            <div style={{
+              width:44, height:44, borderRadius:'50%', flexShrink:0,
+              background:'#2196F3', display:'flex', alignItems:'center',
+              justifyContent:'center', fontSize:22,
+            }}>✈️</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12,fontWeight:700,color:'#E8E8F5',marginBottom:3}}>
+                Есть вопросы? Спроси бота в Telegram
+              </div>
+              <div style={{fontSize:10,color:'#8C8CA5'}}>
+                Найди участника · Статистика · Помощь
+              </div>
+            </div>
+          </a>
+        </div>
 
         {/* Info cards */}
         {[

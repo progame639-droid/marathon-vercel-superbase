@@ -67,6 +67,18 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: error.message })
       }
 
+      // Уведомить Telegram-бота о новом участнике
+      try {
+        const baseUrl = process.env.NEXTAUTH_URL || `https://${req.headers.host}`
+        await fetch(`${baseUrl}/api/telegram-webhook`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'new_participant', participant: data }),
+        })
+      } catch (e) {
+        console.error('Telegram notify error:', e)
+      }
+
       return res.status(201).json(data)
     }
 
