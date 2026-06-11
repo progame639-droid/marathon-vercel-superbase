@@ -2,9 +2,9 @@ import { getSupabaseAdmin } from '../../lib/supabase'
 
 export const config = { api: { bodyParser: true } }
 
-const TOKEN          = process.env.TELEGRAM_BOT_TOKEN
-const ADMIN_CHAT_ID  = process.env.TELEGRAM_ADMIN_CHAT_ID
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY
+const TOKEN         = process.env.TELEGRAM_BOT_TOKEN
+const ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID
+const GROQ_API_KEY  = process.env.GROQ_API_KEY
 
 // ─── Telegram helpers ────────────────────────────────────────────────────────
 
@@ -190,7 +190,7 @@ async function showConfirm(chatId, d) {
   )
 }
 
-// ─── AI Chat (Google Gemini) ──────────────────────────────────────────────────
+// ─── AI Chat (Groq / Llama 3) ─────────────────────────────────────────────────
 
 async function askAI(db, chatId, userText, sess) {
   // Load history from session, append new user message
@@ -211,32 +211,30 @@ async function askAI(db, chatId, userText, sess) {
     }
   } catch (e) {}
 
-  const systemInstruction =
+  const systemPrompt =
     `Ты — ИИ-ассистент марафона Marathon Skills 2026 (Алматы, 15 июня 2026, 42,195 км).\n` +
     `Отвечай кратко, по делу, на русском языке. Ты знаешь всё о марафоне, подготовке, питании, ИМТ.\n` +
     `${statsContext}`
 
-  // Convert to Gemini format: role 'assistant' → 'model'
-  const geminiContents = newHistory.slice(-8).map(m => ({
-    role: m.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: m.content }],
-  }))
-
+  // Groq uses OpenAI-compatible format
   try {
-    const r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemInstruction }] },
-          contents: geminiContents,
-          generationConfig: { maxOutputTokens: 400, temperature: 0.7 },
-        }),
-      }
-    )
+    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 400,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...newHistory.slice(-8),
+        ],
+      }),
+    })
     const data = await r.json()
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || '...'
+    const reply = data.choices?.[0]?.message?.content || '...'
 
     // Save updated history (keep last 16 messages)
     const updatedHistory = [...newHistory, { role: 'assistant', content: reply }].slice(-16)

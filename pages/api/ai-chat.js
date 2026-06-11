@@ -2,7 +2,7 @@ import { getSupabaseAdmin } from '../../lib/supabase'
 
 export const config = { api: { bodyParser: { sizeLimit: '1mb' } } }
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY
+const GROQ_API_KEY = process.env.GROQ_API_KEY
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     }
   } catch (e) { /* silent */ }
 
-  const systemInstruction =
+  const systemPrompt =
     `Ты — умный ИИ-ассистент марафона Marathon Skills 2026.\n` +
     `Марафон проходит 15 июня 2026 года в Алматы, дистанция 42,195 км.\n` +
     `Отвечай на русском языке, кратко и по делу.\n` +
@@ -38,34 +38,30 @@ export default async function handler(req, res) {
     `${statsContext}\n` +
     `Не придумывай участников — только общая статистика выше.`
 
-  // Convert messages to Gemini format
-  // Gemini uses 'user' and 'model' roles (not 'assistant')
-  const geminiContents = messages.slice(-10).map(m => ({
-    role: m.role === 'assistant' ? 'model' : 'user',
-    parts: [{ text: m.content }],
-  }))
-
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemInstruction }] },
-          contents: geminiContents,
-          generationConfig: { maxOutputTokens: 512, temperature: 0.7 },
-        }),
-      }
-    )
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 512,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...messages.slice(-10),
+        ],
+      }),
+    })
 
     const data = await response.json()
     if (!response.ok) {
-      console.error('Gemini error:', data)
+      console.error('Groq error:', data)
       return res.status(500).json({ error: data.error?.message || 'AI error' })
     }
 
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '...'
+    const text = data.choices?.[0]?.message?.content || '...'
     return res.status(200).json({ reply: text })
   } catch (err) {
     console.error('AI chat error:', err)
