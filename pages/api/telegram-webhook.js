@@ -2,9 +2,11 @@ import { getSupabaseAdmin } from '../../lib/supabase'
 
 export const config = { api: { bodyParser: true } }
 
-const TOKEN = process.env.TELEGRAM_BOT_TOKEN
-const ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID
+const TOKEN            = process.env.TELEGRAM_BOT_TOKEN
+const ADMIN_CHAT_ID    = process.env.TELEGRAM_ADMIN_CHAT_ID
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
+
+// ─── Telegram helpers ────────────────────────────────────────────────────────
 
 async function sendMessage(chatId, text, keyboard = null) {
   const body = { chat_id: chatId, text, parse_mode: 'HTML' }
@@ -48,88 +50,129 @@ function calcBMI(weight, height) {
   return { bmi: parseFloat(bmi.toFixed(1)), category, emoji }
 }
 
-// In-memory state
-const regState   = {}
-const waitingFor = {}
-const bmiState   = {}
-const aiState    = {} // { chatId: [{ role, content }] }
+// ─── Persistent session state via Supabase ───────────────────────────────────
+// Replaces in-memory objects (regState / waitingFor / bmiState / aiState)
+// which reset on every Vercel cold start.
+//
+// Table DDL (run once in Supabase SQL Editor):
+//   CREATE TABLE IF NOT EXISTS bot_sessions (
+//     chat_id   TEXT PRIMARY KEY,
+//     mode      TEXT,                 -- 'reg' | 'bmi' | 'ai' | 'surname' | 'name' | null
+//     reg_step  TEXT,                 -- numeric step or named step string
+//     reg_data  JSONB DEFAULT '{}',
+//     bmi_data  JSONB DEFAULT '{}',
+//     ai_msgs   JSONB DEFAULT '[]',   -- last N turns [{role,content}]
+//     updated_at TIMESTAMPTZ DEFAULT NOW()
+//   );
+
+async function getSession(db, chatId) {
+  const { data } = await db
+    .from('bot_sessions')
+    .select('*')
+    .eq('chat_id', String(chatId))
+    .single()
+  return data || { chat_id: String(chatId), mode: null, reg_step: null, reg_data: {}, bmi_data: {}, ai_msgs: [] }
+}
+
+async function saveSession(db, chatId, patch) {
+  const row = { chat_id: String(chatId), updated_at: new Date().toISOString(), ...patch }
+  await db.from('bot_sessions').upsert(row, { onConflict: 'chat_id' })
+}
+
+async function clearSession(db, chatId) {
+  await db.from('bot_sessions').upsert(
+    { chat_id: String(chatId), mode: null, reg_step: null, reg_data: {}, bmi_data: {}, ai_msgs: [], updated_at: new Date().toISOString() },
+    { onConflict: 'chat_id' }
+  )
+}
+
+// ─── Registration flow ───────────────────────────────────────────────────────
 
 const REG_STEPS = ['name', 'surname', 'email', 'gender', 'role', 'country']
 
-async function startRegistration(chatId) {
-  regState[chatId] = { step: 0, data: {} }
+async function startRegistration(db, chatId) {
+  await saveSession(db, chatId, { mode: 'reg', reg_step: '0', reg_data: {} })
   await sendMessage(chatId,
     '📝 <b>Регистрация на марафон</b>\n\nШаг 1 из 6 — Введи своё <b>имя</b>:',
     cancelKeyboard()
   )
 }
 
-async function handleReg(chatId, text, isAdmin) {
-  const state = regState[chatId]
-  const step  = state.step
+async function handleReg(db, chatId, text, sess, isAdmin) {
+  let { reg_step, reg_data } = sess
+  reg_data = reg_data || {}
 
-  if (typeof step === 'number' && step < REG_STEPS.length) {
-    const field = REG_STEPS[step]
+  // Numeric steps 0-5
+  const numStep = parseInt(reg_step, 10)
+  if (!isNaN(numStep) && numStep < REG_STEPS.length) {
+    const field = REG_STEPS[numStep]
     if (field === 'email' && !text.includes('@')) {
       await sendMessage(chatId, '❌ Неверный email. Попробуй ещё раз:', cancelKeyboard())
       return
     }
-    state.data[field] = text
-    state.step++
-    const next = REG_STEPS[state.step]
+    reg_data[field] = text
+    const nextStep = numStep + 1
+    const next = REG_STEPS[nextStep]
 
     if (next === 'gender') {
-      await sendMessage(chatId, `Шаг ${state.step + 1} из 6 — Выбери <b>пол</b>:`,
+      await saveSession(db, chatId, { reg_step: String(nextStep), reg_data })
+      await sendMessage(chatId, `Шаг ${nextStep + 1} из 6 — Выбери <b>пол</b>:`,
         { keyboard: [['Мужской', 'Женский'], ['❌ Отмена']], resize_keyboard: true })
     } else if (next === 'role') {
-      await sendMessage(chatId, `Шаг ${state.step + 1} из 6 — Выбери <b>роль</b>:`,
+      await saveSession(db, chatId, { reg_step: String(nextStep), reg_data })
+      await sendMessage(chatId, `Шаг ${nextStep + 1} из 6 — Выбери <b>роль</b>:`,
         { keyboard: [['Бегун', 'Координатор'], ['❌ Отмена']], resize_keyboard: true })
     } else if (next === 'country') {
-      await sendMessage(chatId, `Шаг ${state.step + 1} из 6 — Введи <b>страну</b>:`, cancelKeyboard())
+      await saveSession(db, chatId, { reg_step: String(nextStep), reg_data })
+      await sendMessage(chatId, `Шаг ${nextStep + 1} из 6 — Введи <b>страну</b>:`, cancelKeyboard())
     } else if (!next) {
-      state.step = 'bmi_ask'
+      await saveSession(db, chatId, { reg_step: 'bmi_ask', reg_data })
       await sendMessage(chatId,
         '📊 Хочешь рассчитать <b>ИМТ</b>? Это необязательно.',
         { keyboard: [['📊 Рассчитать ИМТ', '⏭ Пропустить'], ['❌ Отмена']], resize_keyboard: true }
       )
     } else {
+      await saveSession(db, chatId, { reg_step: String(nextStep), reg_data })
       const label = next === 'surname' ? 'фамилию' : next === 'email' ? 'email' : next
-      await sendMessage(chatId, `Шаг ${state.step + 1} из 6 — Введи <b>${label}</b>:`, cancelKeyboard())
+      await sendMessage(chatId, `Шаг ${nextStep + 1} из 6 — Введи <b>${label}</b>:`, cancelKeyboard())
     }
     return
   }
 
-  if (step === 'bmi_ask') {
+  if (reg_step === 'bmi_ask') {
     if (text === '📊 Рассчитать ИМТ') {
-      state.step = 'bmi_weight'
+      await saveSession(db, chatId, { reg_step: 'bmi_weight', reg_data })
       await sendMessage(chatId, '⚖️ Введи свой <b>вес</b> в кг (например: <code>72</code>):', cancelKeyboard())
     } else {
-      state.data.bmi = null; state.step = 'confirm'
-      await showConfirm(chatId, state.data)
+      reg_data.bmi = null
+      await saveSession(db, chatId, { reg_step: 'confirm', reg_data })
+      await showConfirm(chatId, reg_data)
     }
     return
   }
 
-  if (step === 'bmi_weight') {
+  if (reg_step === 'bmi_weight') {
     const w = parseFloat(text)
     if (isNaN(w) || w < 30 || w > 300) {
       await sendMessage(chatId, '❌ Некорректный вес:', cancelKeyboard()); return
     }
-    state.data._weight = w; state.step = 'bmi_height'
+    reg_data._weight = w
+    await saveSession(db, chatId, { reg_step: 'bmi_height', reg_data })
     await sendMessage(chatId, '📏 Введи свой <b>рост</b> в см:', cancelKeyboard())
     return
   }
 
-  if (step === 'bmi_height') {
+  if (reg_step === 'bmi_height') {
     const h = parseFloat(text)
     if (isNaN(h) || h < 100 || h > 250) {
       await sendMessage(chatId, '❌ Некорректный рост:', cancelKeyboard()); return
     }
-    const { bmi, category, emoji } = calcBMI(state.data._weight, h)
-    delete state.data._weight; state.data.bmi = bmi
+    const { bmi, category, emoji } = calcBMI(reg_data._weight, h)
+    delete reg_data._weight
+    reg_data.bmi = bmi
     await sendMessage(chatId, `${emoji} Твой ИМТ: <b>${bmi}</b> — ${category}`)
-    state.step = 'confirm'
-    await showConfirm(chatId, state.data)
+    await saveSession(db, chatId, { reg_step: 'confirm', reg_data })
+    await showConfirm(chatId, reg_data)
     return
   }
 }
@@ -147,28 +190,31 @@ async function showConfirm(chatId, d) {
   )
 }
 
-// ── AI Chat via Anthropic ─────────────────────────────────────────
-async function askAI(chatId, userText, db) {
-  if (!aiState[chatId]) aiState[chatId] = []
-  aiState[chatId].push({ role: 'user', content: userText })
+// ─── AI Chat ─────────────────────────────────────────────────────────────────
 
-  // Get stats
+async function askAI(db, chatId, userText, sess) {
+  // Load history from session, append new user message
+  const history = Array.isArray(sess.ai_msgs) ? sess.ai_msgs : []
+  const newHistory = [...history, { role: 'user', content: userText }]
+
+  // Get live stats
   let statsContext = ''
   try {
     const { data } = await db.from('participants').select('role, country, bmi')
     if (data) {
       const total = data.length
       const runners = data.filter(p => p.role === 'Бегун').length
-      const coords = data.filter(p => p.role === 'Координатор').length
+      const coords  = data.filter(p => p.role === 'Координатор').length
       const bmis = data.map(p => p.bmi).filter(Boolean)
       const avg = bmis.length ? (bmis.reduce((a,b)=>a+b,0)/bmis.length).toFixed(1) : '—'
       statsContext = `Текущая статистика: всего ${total} участников (бегунов: ${runners}, координаторов: ${coords}), средний ИМТ: ${avg}.`
     }
   } catch (e) {}
 
-  const systemPrompt = `Ты — ИИ-ассистент марафона Marathon Skills 2026 (Алматы, 15 июня 2026, 42,195 км).
-Отвечай кратко, по делу, на русском языке. Ты знаешь всё о марафоне, подготовке, питании, ИМТ.
-${statsContext}`
+  const systemPrompt =
+    `Ты — ИИ-ассистент марафона Marathon Skills 2026 (Алматы, 15 июня 2026, 42,195 км).\n` +
+    `Отвечай кратко, по делу, на русском языке. Ты знаешь всё о марафоне, подготовке, питании, ИМТ.\n` +
+    `${statsContext}`
 
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -182,23 +228,29 @@ ${statsContext}`
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 400,
         system: systemPrompt,
-        messages: aiState[chatId].slice(-8),
+        messages: newHistory.slice(-8),
       }),
     })
     const data = await r.json()
     const reply = data.content?.find(c => c.type === 'text')?.text || '...'
-    aiState[chatId].push({ role: 'assistant', content: reply })
+
+    // Save updated history (keep last 8 turns = 16 messages)
+    const updatedHistory = [...newHistory, { role: 'assistant', content: reply }].slice(-16)
+    await saveSession(db, chatId, { mode: 'ai', ai_msgs: updatedHistory })
+
     return reply
   } catch (e) {
     return '❌ ИИ временно недоступен. Попробуй позже.'
   }
 }
 
+// ─── Main handler ────────────────────────────────────────────────────────────
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(200).json({ ok: true })
 
   try {
-    // ── Server notifications (from website) ──────────────────────
+    // ── Server-side notifications (from website / import) ─────────
     if (req.body?.type === 'new_participant') {
       if (ADMIN_CHAT_ID) {
         const p = req.body.participant
@@ -222,7 +274,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true })
     }
 
-    // Supabase webhook (Database Webhooks)
+    // ── Supabase Database Webhook ─────────────────────────────────
     if (req.body?.type === 'INSERT' && req.body?.table === 'participants') {
       if (ADMIN_CHAT_ID) {
         const p = req.body.record
@@ -235,7 +287,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true })
     }
 
-    // ── Telegram message ─────────────────────────────────────────
+    // ── Telegram message ──────────────────────────────────────────
     const message = req.body?.message
     if (!message?.text) return res.status(200).json({ ok: true })
 
@@ -244,18 +296,20 @@ export default async function handler(req, res) {
     const isAdmin = String(chatId) === String(ADMIN_CHAT_ID)
     const db      = getSupabaseAdmin()
 
-    // ── Cancel ───────────────────────────────────────────────────
+    // Load persistent session for this chat
+    const sess = await getSession(db, chatId)
+
+    // ── Cancel ────────────────────────────────────────────────────
     if (text === '❌ Отмена') {
-      delete regState[chatId]; delete waitingFor[chatId]
-      delete bmiState[chatId]; delete aiState[chatId]
+      await clearSession(db, chatId)
       await sendMessage(chatId, '↩️ Отменено.', mainKeyboard(isAdmin))
       return res.status(200).json({ ok: true })
     }
 
     // ── Confirm registration ──────────────────────────────────────
-    if (text === '✅ Подтвердить' && regState[chatId]?.step === 'confirm') {
-      const d = regState[chatId].data
-      delete regState[chatId]
+    if (text === '✅ Подтвердить' && sess.mode === 'reg' && sess.reg_step === 'confirm') {
+      const d = sess.reg_data || {}
+      await clearSession(db, chatId)
 
       const { data, error } = await db
         .from('participants')
@@ -294,15 +348,14 @@ export default async function handler(req, res) {
     }
 
     // ── Active registration flow ──────────────────────────────────
-    if (regState[chatId]) {
-      await handleReg(chatId, text, isAdmin)
+    if (sess.mode === 'reg') {
+      await handleReg(db, chatId, text, sess, isAdmin)
       return res.status(200).json({ ok: true })
     }
 
     // ── AI Mode ───────────────────────────────────────────────────
     if (text === '🤖 Спросить ИИ') {
-      aiState[chatId] = []
-      waitingFor[chatId] = 'ai'
+      await saveSession(db, chatId, { mode: 'ai', ai_msgs: [] })
       await sendMessage(chatId,
         '🤖 <b>ИИ-ассистент марафона</b>\n\nЗадай любой вопрос о марафоне, подготовке, питании или регистрации. Для выхода нажми «❌ Отмена».',
         cancelKeyboard()
@@ -310,9 +363,9 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true })
     }
 
-    if (waitingFor[chatId] === 'ai') {
+    if (sess.mode === 'ai') {
       await sendMessage(chatId, '💭 Думаю...')
-      const reply = await askAI(chatId, text, db)
+      const reply = await askAI(db, chatId, text, sess)
       await sendMessage(chatId, `🤖 ${reply}`, cancelKeyboard())
       return res.status(200).json({ ok: true })
     }
@@ -320,29 +373,71 @@ export default async function handler(req, res) {
     // ── BMI Calculator (admin) ────────────────────────────────────
     if (text === '⚖️ Калькулятор ИМТ (Админ)') {
       if (!isAdmin) { await sendMessage(chatId, '❌ Только для администратора.', mainKeyboard(isAdmin)); return res.status(200).json({ ok: true }) }
-      bmiState[chatId] = { step: 'weight' }
+      await saveSession(db, chatId, { mode: 'bmi', bmi_data: { step: 'weight' } })
       await sendMessage(chatId, '⚖️ <b>Калькулятор ИМТ</b>\n\nВведи <b>вес</b> в кг:', cancelKeyboard())
       return res.status(200).json({ ok: true })
     }
 
-    if (bmiState[chatId]?.step === 'weight') {
+    if (sess.mode === 'bmi' && sess.bmi_data?.step === 'weight') {
       const w = parseFloat(text)
       if (isNaN(w) || w < 30 || w > 300) { await sendMessage(chatId, '❌ Некорректный вес:', cancelKeyboard()); return res.status(200).json({ ok: true }) }
-      bmiState[chatId] = { step: 'height', weight: w }
+      await saveSession(db, chatId, { mode: 'bmi', bmi_data: { step: 'height', weight: w } })
       await sendMessage(chatId, '📏 Введи <b>рост</b> в см:', cancelKeyboard())
       return res.status(200).json({ ok: true })
     }
 
-    if (bmiState[chatId]?.step === 'height') {
+    if (sess.mode === 'bmi' && sess.bmi_data?.step === 'height') {
       const h = parseFloat(text)
       if (isNaN(h) || h < 100 || h > 250) { await sendMessage(chatId, '❌ Некорректный рост:', cancelKeyboard()); return res.status(200).json({ ok: true }) }
-      const { bmi, category, emoji } = calcBMI(bmiState[chatId].weight, h)
-      delete bmiState[chatId]
+      const { bmi, category, emoji } = calcBMI(sess.bmi_data.weight, h)
+      await clearSession(db, chatId)
       const bar = bmi < 18.5 ? '🟦⬜⬜⬜' : bmi < 25 ? '🟦🟩⬜⬜' : bmi < 30 ? '🟦🟩🟨⬜' : '🟦🟩🟨🟥'
       await sendMessage(chatId,
         `${emoji} <b>ИМТ: ${bmi}</b> — ${category}\n${bar}\n\n🟦 &lt;18.5 Недостаточный\n🟩 18.5–24.9 Норма ✅\n🟨 25–29.9 Избыточный\n🟥 ≥30 Ожирение`,
         mainKeyboard(isAdmin)
       )
+      return res.status(200).json({ ok: true })
+    }
+
+    // ── Search (waiting mode) ─────────────────────────────────────
+    if (text === '🔍 Найти по фамилии') {
+      await saveSession(db, chatId, { mode: 'surname' })
+      await sendMessage(chatId, '✏️ Введи <b>фамилию</b>:', cancelKeyboard())
+      return res.status(200).json({ ok: true })
+    }
+
+    if (text === '🔍 Найти по имени') {
+      await saveSession(db, chatId, { mode: 'name' })
+      await sendMessage(chatId, '✏️ Введи <b>имя</b>:', cancelKeyboard())
+      return res.status(200).json({ ok: true })
+    }
+
+    if (sess.mode === 'surname' || sess.mode === 'name') {
+      const field = sess.mode === 'name' ? 'name' : 'surname'
+      await clearSession(db, chatId)
+      const { data, error } = await db
+        .from('participants')
+        .select('id, name, surname, role, country, bmi, gender')
+        .ilike(field, `%${text}%`)
+        .limit(5)
+
+      if (error) { await sendMessage(chatId, '❌ Ошибка базы данных.', mainKeyboard(isAdmin)); return res.status(200).json({ ok: true }) }
+      if (!data || data.length === 0) {
+        await sendMessage(chatId, `❌ По запросу «<b>${escapeHtml(text)}</b>» никого не найдено.`, mainKeyboard(isAdmin))
+        return res.status(200).json({ ok: true })
+      }
+
+      let reply = `✅ Найдено: <b>${data.length}</b> участник(ов)\n\n`
+      data.forEach(p => {
+        const g = p.gender === 'Женский' ? '👩' : '👨'
+        reply += `${g} <b>${escapeHtml(p.surname)} ${escapeHtml(p.name)}</b>\n`
+        reply += `   🎽 ${p.role || '—'} · 🌍 ${p.country || '—'}`
+        if (p.bmi) reply += ` · 📊 ${p.bmi}`
+        reply += '\n'
+        if (isAdmin) reply += `   🗑 /delete_${p.id}\n`
+        reply += '\n'
+      })
+      await sendMessage(chatId, reply.trim(), mainKeyboard(isAdmin))
       return res.status(200).json({ ok: true })
     }
 
@@ -360,14 +455,23 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true })
     }
 
-    // ── Menu commands ─────────────────────────────────────────────
+    // ── Admin: delete participant ─────────────────────────────────
+    if (text.startsWith('/delete_')) {
+      if (!isAdmin) { await sendMessage(chatId, '❌ Нет прав.', mainKeyboard(isAdmin)); return res.status(200).json({ ok: true }) }
+      const id = text.replace('/delete_', '').trim()
+      const { error } = await db.from('participants').delete().eq('id', id)
+      await sendMessage(chatId, error ? `❌ Ошибка: ${error.message}` : '✅ Участник удалён.', mainKeyboard(isAdmin))
+      return res.status(200).json({ ok: true })
+    }
+
+    // ── Menu static commands ──────────────────────────────────────
     if (text === '/start' || text === '/help') {
       await sendMessage(chatId, '🏃 <b>Marathon Skills 2026</b>\n\nПривет! Выбери действие 👇', mainKeyboard(isAdmin))
       return res.status(200).json({ ok: true })
     }
 
     if (text === '✚ Зарегистрироваться на марафон') {
-      await startRegistration(chatId); return res.status(200).json({ ok: true })
+      await startRegistration(db, chatId); return res.status(200).json({ ok: true })
     }
 
     if (text === '🌐 Открыть сайт') {
@@ -397,7 +501,7 @@ export default async function handler(req, res) {
         await sendMessage(chatId, '❌ Не удалось получить статистику.', mainKeyboard(isAdmin))
         return res.status(200).json({ ok: true })
       }
-      const total = data.length
+      const total   = data.length
       const runners = data.filter(p => p.role === 'Бегун').length
       const coords  = data.filter(p => p.role === 'Координатор').length
       const countries = [...new Set(data.map(p => p.country).filter(Boolean))]
@@ -411,53 +515,8 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true })
     }
 
-    if (text === '🔍 Найти по фамилии') {
-      waitingFor[chatId] = 'surname'
-      await sendMessage(chatId, '✏️ Введи <b>фамилию</b>:', cancelKeyboard())
-      return res.status(200).json({ ok: true })
-    }
-
-    if (text === '🔍 Найти по имени') {
-      waitingFor[chatId] = 'name'
-      await sendMessage(chatId, '✏️ Введи <b>имя</b>:', cancelKeyboard())
-      return res.status(200).json({ ok: true })
-    }
-
-    if (text.startsWith('/delete_')) {
-      if (!isAdmin) { await sendMessage(chatId, '❌ Нет прав.', mainKeyboard(isAdmin)); return res.status(200).json({ ok: true }) }
-      const id = text.replace('/delete_', '').trim()
-      const { error } = await db.from('participants').delete().eq('id', id)
-      await sendMessage(chatId, error ? `❌ Ошибка: ${error.message}` : '✅ Участник удалён.', mainKeyboard(isAdmin))
-      return res.status(200).json({ ok: true })
-    }
-
-    // Search
-    const searchMode = waitingFor[chatId] || 'surname'
-    delete waitingFor[chatId]
-    const field = searchMode === 'name' ? 'name' : 'surname'
-    const { data, error } = await db
-      .from('participants')
-      .select('id, name, surname, role, country, bmi, gender')
-      .ilike(field, `%${text}%`)
-      .limit(5)
-
-    if (error) { await sendMessage(chatId, '❌ Ошибка базы данных.', mainKeyboard(isAdmin)); return res.status(200).json({ ok: true }) }
-    if (!data || data.length === 0) {
-      await sendMessage(chatId, `❌ По запросу «<b>${escapeHtml(text)}</b>» никого не найдено.`, mainKeyboard(isAdmin))
-      return res.status(200).json({ ok: true })
-    }
-
-    let reply = `✅ Найдено: <b>${data.length}</b> участник(ов)\n\n`
-    data.forEach(p => {
-      const g = p.gender === 'Женский' ? '👩' : '👨'
-      reply += `${g} <b>${escapeHtml(p.surname)} ${escapeHtml(p.name)}</b>\n`
-      reply += `   🎽 ${p.role || '—'} · 🌍 ${p.country || '—'}`
-      if (p.bmi) reply += ` · 📊 ${p.bmi}`
-      reply += '\n'
-      if (isAdmin) reply += `   🗑 /delete_${p.id}\n`
-      reply += '\n'
-    })
-    await sendMessage(chatId, reply.trim(), mainKeyboard(isAdmin))
+    // ── Fallback ──────────────────────────────────────────────────
+    await sendMessage(chatId, '👇 Выбери действие из меню:', mainKeyboard(isAdmin))
     return res.status(200).json({ ok: true })
 
   } catch (err) {

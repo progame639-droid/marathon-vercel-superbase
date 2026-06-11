@@ -142,3 +142,57 @@ npm run dev
 | photo | TEXT | Фото (base64) |
 | created_at | TIMESTAMPTZ | Дата создания |
 | updated_at | TIMESTAMPTZ | Дата изменения |
+
+---
+
+## Шаг 5 — Telegram-бот + ИИ
+
+### Переменные окружения (добавить в Vercel)
+
+| Имя переменной | Где взять |
+|---|---|
+| `TELEGRAM_BOT_TOKEN` | @BotFather → `/newbot` |
+| `TELEGRAM_ADMIN_CHAT_ID` | Написать боту `/start`, затем `https://api.telegram.org/bot<TOKEN>/getUpdates` |
+| `ANTHROPIC_API_KEY` | [console.anthropic.com](https://console.anthropic.com) → API Keys |
+| `CRON_SECRET` | Любая случайная строка (необязательно) |
+
+### Таблица bot_sessions в Supabase
+
+Выполни в SQL Editor (уже добавлено в `supabase_schema.sql`):
+
+```sql
+CREATE TABLE IF NOT EXISTS bot_sessions (
+  chat_id    TEXT PRIMARY KEY,
+  mode       TEXT,
+  reg_step   TEXT,
+  reg_data   JSONB DEFAULT '{}',
+  bmi_data   JSONB DEFAULT '{}',
+  ai_msgs    JSONB DEFAULT '[]',
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**Почему это нужно:** Vercel — serverless, каждый запрос может попасть в новый контейнер.
+Состояния регистрации, ИИ-диалога, поиска хранились в памяти (`const regState = {}`),
+поэтому между сообщениями они сбрасывались. Теперь состояния хранятся в Supabase.
+
+### Регистрация webhook
+
+```bash
+curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://ВАШ_ДОМЕН.vercel.app/api/telegram-webhook"}'
+```
+
+### Supabase Database Webhook (уведомления в реальном времени)
+
+1. Supabase → **Database → Webhooks → Create a new hook**
+2. Name: `notify_new_participant`
+3. Table: `participants`, Event: `INSERT`
+4. HTTP POST URL: `https://ВАШ_ДОМЕН.vercel.app/api/telegram-webhook`
+5. HTTP Headers: `Content-Type: application/json`
+
+### Ежедневная статистика
+
+Настроена в `vercel.json` — каждый день в 09:00 UTC вызывает `/api/cron-daily-stats`.
+Требует план Vercel **Hobby** (бесплатный поддерживает cron).
