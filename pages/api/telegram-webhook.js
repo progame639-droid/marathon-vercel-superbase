@@ -351,13 +351,21 @@ export default async function handler(req, res) {
 
     // ── Search buttons — always intercept, even if in another mode ──
     if (text === '🔍 Найти по фамилии') {
-      await saveSession(db, chatId, { mode: 'surname' })
+      const { error: saveErr } = await db.from('bot_sessions').upsert(
+        { chat_id: String(chatId), mode: 'surname', reg_step: null, reg_data: {}, bmi_data: {}, ai_msgs: [], updated_at: new Date().toISOString() },
+        { onConflict: 'chat_id' }
+      )
+      if (saveErr) console.error('saveSession surname error:', saveErr)
       await sendMessage(chatId, '✏️ Введи <b>фамилию</b>:', cancelKeyboard())
       return res.status(200).json({ ok: true })
     }
 
     if (text === '🔍 Найти по имени') {
-      await saveSession(db, chatId, { mode: 'name' })
+      const { error: saveErr } = await db.from('bot_sessions').upsert(
+        { chat_id: String(chatId), mode: 'name', reg_step: null, reg_data: {}, bmi_data: {}, ai_msgs: [], updated_at: new Date().toISOString() },
+        { onConflict: 'chat_id' }
+      )
+      if (saveErr) console.error('saveSession name error:', saveErr)
       await sendMessage(chatId, '✏️ Введи <b>имя</b>:', cancelKeyboard())
       return res.status(200).json({ ok: true })
     }
@@ -417,12 +425,15 @@ export default async function handler(req, res) {
     // ── Search (waiting mode) ─────────────────────────────────────
     if (sess.mode === 'surname' || sess.mode === 'name') {
       const field = sess.mode === 'name' ? 'name' : 'surname'
+      console.log(`[SEARCH] mode=${sess.mode} field=${field} query="${text}" chatId=${chatId}`)
       await clearSession(db, chatId)
       const { data, error } = await db
         .from('participants')
         .select('id, name, surname, role, country, bmi, gender')
         .ilike(field, `%${text}%`)
         .limit(5)
+
+      console.log(`[SEARCH] result: data=${JSON.stringify(data)?.slice(0,200)} error=${JSON.stringify(error)}`)
 
       if (error) { await sendMessage(chatId, '❌ Ошибка базы данных.', mainKeyboard(isAdmin)); return res.status(200).json({ ok: true }) }
       if (!data || data.length === 0) {
