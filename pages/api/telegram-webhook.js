@@ -19,6 +19,24 @@ async function sendMessage(chatId, text, keyboard = null) {
   return r.json()
 }
 
+// force_reply: пользователь отвечает реплаем — контекст поиска читаем из reply_to_message
+async function askForSearch(chatId, field) {
+  const prompt = field === 'surname'
+    ? '\u270f\ufe0f Введи <b>фамилию</b> для поиска:'
+    : '\u270f\ufe0f Введи <b>имя</b> для поиска:'
+  const body = {
+    chat_id: chatId,
+    text: prompt,
+    parse_mode: 'HTML',
+    reply_markup: { force_reply: true, selective: true },
+  }
+  await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
 function mainKeyboard(isAdmin) {
   const rows = [
     ['✚ Зарегистрироваться на марафон'],
@@ -298,6 +316,45 @@ export default async function handler(req, res) {
     const isAdmin = String(chatId) === String(ADMIN_CHAT_ID)
     const db      = getSupabaseAdmin()
 
+    // ── Поиск через force_reply (без зависимости от bot_sessions) ────
+    // Если это реплай на наш запрос поиска — обрабатываем сразу
+    const replyTo = message.reply_to_message
+    if (replyTo?.text) {
+      const rt = replyTo.text
+      let searchField = null
+      if (rt.includes('фамилию') && rt.includes('поиска')) searchField = 'surname'
+      else if (rt.includes('имя') && rt.includes('поиска')) searchField = 'name'
+
+      if (searchField) {
+        const { data, error } = await db
+          .from('participants')
+          .select('id, name, surname, role, country, bmi, gender')
+          .ilike(searchField, `%${text}%`)
+          .limit(5)
+
+        if (error) {
+          await sendMessage(chatId, `❌ Ошибка базы данных: ${error.message}`, mainKeyboard(isAdmin))
+          return res.status(200).json({ ok: true })
+        }
+        if (!data || data.length === 0) {
+          await sendMessage(chatId, `❌ По запросу «<b>${escapeHtml(text)}</b>» никого не найдено.`, mainKeyboard(isAdmin))
+          return res.status(200).json({ ok: true })
+        }
+        let reply = `✅ Найдено: <b>${data.length}</b> участник(ов)\n\n`
+        data.forEach(p => {
+          const g = p.gender === 'Женский' ? '👩' : '👨'
+          reply += `${g} <b>${escapeHtml(p.surname)} ${escapeHtml(p.name)}</b>\n`
+          reply += `   🎽 ${p.role || '—'} · 🌍 ${p.country || '—'}`
+          if (p.bmi) reply += ` · 📊 ${p.bmi}`
+          reply += '\n'
+          if (isAdmin) reply += `   🗑 /delete_${p.id}\n`
+          reply += '\n'
+        })
+        await sendMessage(chatId, reply.trim(), mainKeyboard(isAdmin))
+        return res.status(200).json({ ok: true })
+      }
+    }
+
     // Load persistent session for this chat
     const sess = await getSession(db, chatId)
 
@@ -349,24 +406,14 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true })
     }
 
-    // ── Search buttons — always intercept, even if in another mode ──
+    // ── Search buttons — используем force_reply, сессии не нужны ──
     if (text === '🔍 Найти по фамилии') {
-      const { error: saveErr } = await db.from('bot_sessions').upsert(
-        { chat_id: String(chatId), mode: 'surname', reg_step: null, reg_data: {}, bmi_data: {}, ai_msgs: [], updated_at: new Date().toISOString() },
-        { onConflict: 'chat_id' }
-      )
-      if (saveErr) console.error('saveSession surname error:', saveErr)
-      await sendMessage(chatId, '✏️ Введи <b>фамилию</b>:', cancelKeyboard())
+      await askForSearch(chatId, 'surname')
       return res.status(200).json({ ok: true })
     }
 
     if (text === '🔍 Найти по имени') {
-      const { error: saveErr } = await db.from('bot_sessions').upsert(
-        { chat_id: String(chatId), mode: 'name', reg_step: null, reg_data: {}, bmi_data: {}, ai_msgs: [], updated_at: new Date().toISOString() },
-        { onConflict: 'chat_id' }
-      )
-      if (saveErr) console.error('saveSession name error:', saveErr)
-      await sendMessage(chatId, '✏️ Введи <b>имя</b>:', cancelKeyboard())
+      await askForSearch(chatId, 'name')
       return res.status(200).json({ ok: true })
     }
 
