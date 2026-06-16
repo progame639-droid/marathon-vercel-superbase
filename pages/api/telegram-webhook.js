@@ -349,6 +349,19 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true })
     }
 
+    // ── Search buttons — always intercept, even if in another mode ──
+    if (text === '🔍 Найти по фамилии') {
+      await saveSession(db, chatId, { mode: 'surname' })
+      await sendMessage(chatId, '✏️ Введи <b>фамилию</b>:', cancelKeyboard())
+      return res.status(200).json({ ok: true })
+    }
+
+    if (text === '🔍 Найти по имени') {
+      await saveSession(db, chatId, { mode: 'name' })
+      await sendMessage(chatId, '✏️ Введи <b>имя</b>:', cancelKeyboard())
+      return res.status(200).json({ ok: true })
+    }
+
     // ── Active registration flow ──────────────────────────────────
     if (sess.mode === 'reg') {
       await handleReg(db, chatId, text, sess, isAdmin)
@@ -402,18 +415,6 @@ export default async function handler(req, res) {
     }
 
     // ── Search (waiting mode) ─────────────────────────────────────
-    if (text === '🔍 Найти по фамилии') {
-      await saveSession(db, chatId, { mode: 'surname' })
-      await sendMessage(chatId, '✏️ Введи <b>фамилию</b>:', cancelKeyboard())
-      return res.status(200).json({ ok: true })
-    }
-
-    if (text === '🔍 Найти по имени') {
-      await saveSession(db, chatId, { mode: 'name' })
-      await sendMessage(chatId, '✏️ Введи <b>имя</b>:', cancelKeyboard())
-      return res.status(200).json({ ok: true })
-    }
-
     if (sess.mode === 'surname' || sess.mode === 'name') {
       const field = sess.mode === 'name' ? 'name' : 'surname'
       await clearSession(db, chatId)
