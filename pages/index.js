@@ -333,3 +333,64 @@ function TimerBar() {
     </div>
   )
 }
+
+// ── ГЛАВНАЯ СТРАНИЦА (ЭКСПОРТ ПО УМОЛЧАНИЮ) ───────────────────────
+export default function HomePage() {
+  const { data: session } = useSession()
+  const [isChatOpen, setIsChatOpen] = useState(false)
+  const [isImportOpen, setIsImportOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  // Временные функции-заглушки для демонстрации кнопок
+  const handleUsersClick = () => alert('Открытие списка участников...')
+  const handleRegisterClick = () => alert('Открытие формы регистрации...')
+  const handleAdminLogin = () => { setIsAdmin(true); alert('Вы вошли как админ!') }
+  const handleAdminLogout = () => { setIsAdmin(false); alert('Вы вышли из режима админа') }
+  const handleImported = () => alert('Импорт успешно завершен!')
+
+  return (
+    <div style={{ background: '#F7F4EC', minHeight: '100vh', display: 'flex', flexDirection: 'column', color: '#16140F', fontFamily: "'Inter', sans-serif" }}>
+      {/* Шапка сайта */}
+      <Navbar 
+        session={session} 
+        isAdmin={isAdmin}
+        onUsers={handleUsersClick}
+        onRegister={handleRegisterClick}
+        onAdminLogin={handleAdminLogin}
+        onAdminLogout={handleAdminLogout}
+      />
+
+      {/* Основной контент */}
+      <main style={{ flex: 1, padding: '40px 20px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+        <div style={{ background: '#FFFFFF', border: '2px solid #16140F', padding: '30px', boxShadow: '8px 8px 0 #16140F' }}>
+          <h1 style={{ fontFamily: "'Anton', sans-serif", fontSize: '32px', marginBottom: '16px', letterSpacing: '0.5px' }}>
+            ДОБРО ПОЖАЛОВАТЬ НА MARATHON SKILLS 2026!
+          </h1>
+          <p style={{ fontSize: '14px', lineHeight: '1.6', marginBottom: '24px', color: '#6B6655' }}>
+            Готовьтесь к самому масштабному беговому событию года. Используйте навигацию выше для регистрации или просмотра участников.
+          </p>
+
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button style={{ ...btnDark, height: '40px' }} onClick={() => setIsChatOpen(true)}>
+              🤖 Открыть ИИ-ассистента
+            </button>
+            {isAdmin && (
+              <button style={{ ...btnLime, height: '40px' }} onClick={() => setIsImportOpen(true)}>
+                📥 Импорт участников (CSV)
+              </button>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* Виджет чата */}
+      <AIChatWidget open={isChatOpen} onClose={() => setIsChatOpen(false)} />
+
+      {/* Модальное окно импорта */}
+      <ImportModal open={isImportOpen} onClose={() => setIsImportOpen(false)} onImported={handleImported} />
+
+      {/* Подвал с таймером обратно отсчета */}
+      <TimerBar />
+    </div>
+  )
+}
