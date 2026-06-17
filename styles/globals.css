@@ -43,8 +43,3 @@ a { color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
-EOF
-echo done
-Output
-
-done
