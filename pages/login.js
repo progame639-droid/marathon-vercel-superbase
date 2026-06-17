@@ -93,5 +93,3 @@ export default function LoginPage() {
     </div>
   )
 }
-EOF
-echo done
