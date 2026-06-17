@@ -9,17 +9,19 @@ const COUNTRIES = [
 ]
 
 function useTimer() {
-  const [time, setTime] = useState('')
+  const [time, setTime] = useState({ d:0, h:0, m:0, s:0, started:false })
   useEffect(() => {
     const target = new Date('2026-06-15T09:00:00')
     const tick = () => {
       const diff = target - new Date()
-      if (diff <= 0) { setTime('МАРАФОН НАЧАЛСЯ! 🏃'); return }
-      const d = Math.floor(diff/86400000)
-      const h = Math.floor((diff%86400000)/3600000)
-      const m = Math.floor((diff%3600000)/60000)
-      const s = Math.floor((diff%60000)/1000)
-      setTime(`⏱ До марафона: ${d}д ${h}ч ${m}м ${s}с`)
+      if (diff <= 0) { setTime({ started: true }); return }
+      setTime({
+        d: Math.floor(diff/86400000),
+        h: Math.floor((diff%86400000)/3600000),
+        m: Math.floor((diff%3600000)/60000),
+        s: Math.floor((diff%60000)/1000),
+        started: false
+      })
     }
     tick(); const id = setInterval(tick, 1000)
     return () => clearInterval(id)
@@ -27,11 +29,12 @@ function useTimer() {
   return time
 }
 
-const C_BLUE='#2196F3', C_GREEN='#4CAF50', C_YELLOW='#FF9800', C_RED='#E53935', C_MUTED='#8C8CA5'
+const C_BLUE='#1D3557', C_GREEN='#2D6A4F', C_YELLOW='#E9C46A', C_RED='#D62828', C_MUTED='#888'
+
 function bmiCategory(v) {
   if (!v) return ''
   if (v < 18.5) return 'Недостаточный вес'
-  if (v < 25)   return 'Здоровый вес ✓'
+  if (v < 25)   return 'Здоровый вес'
   if (v < 30)   return 'Избыточный вес'
   return 'Ожирение'
 }
@@ -59,7 +62,7 @@ function drawFigureOnCanvas(canvas, bmiVal, gender) {
   ctx.fillRect(cx+bw+1,cy-29,13,40)
   ctx.fillRect(cx-bw+4,cy+23,bw-8,44)
   ctx.fillRect(cx+4,cy+23,bw-8,44)
-  ctx.font='bold 13px Segoe UI'; ctx.fillStyle=bc; ctx.textAlign='center'
+  ctx.font='bold 13px Oswald'; ctx.fillStyle=bc; ctx.textAlign='center'
   ctx.fillText(gender==='Женский'?'♀':'♂',cx,h-5)
 }
 
@@ -74,29 +77,144 @@ function drawGaugeOnCanvas(canvas, bmiVal) {
   segs.forEach(s=>{
     const sw=pw*s.w
     ctx.fillStyle=s.color; ctx.fillRect(x,gy,sw,gh)
-    ctx.fillStyle='#fff'; ctx.font='8px Segoe UI'; ctx.textAlign='center'
+    ctx.fillStyle='#0A0A0A'; ctx.font='8px Inter'; ctx.textAlign='center'
     ctx.fillText(s.label,x+sw/2,gy+gh+10); x+=sw
   })
   if (bmiVal>0) {
     const norm=Math.min(Math.max((bmiVal-10)/30,0),1)
     const mx=gx+norm*pw
-    ctx.fillStyle='#fff'; ctx.beginPath()
+    ctx.fillStyle='#0A0A0A'; ctx.beginPath()
     ctx.moveTo(mx,gy-1); ctx.lineTo(mx-6,gy-10); ctx.lineTo(mx+6,gy-10); ctx.closePath(); ctx.fill()
   }
 }
 
-const inputStyle={width:'100%',background:'#23233E',border:'1px solid #35355A',color:'#E8E8F5',borderRadius:3,padding:'0 10px',height:30,fontFamily:'inherit',fontSize:11}
-const selectStyle={...inputStyle}
-const btnOrange={cursor:'pointer',border:'none',borderRadius:4,fontFamily:'inherit',fontSize:11,display:'inline-flex',alignItems:'center',gap:5,whiteSpace:'nowrap',background:'#E85D04',color:'#fff',padding:'0 14px',height:34,fontWeight:600}
-const btnNav={...btnOrange,background:'#252540',fontWeight:400,border:'1px solid #35355A'}
-const btnDark={...btnNav}
-const btnGreen={...btnOrange,background:'#2E7D32'}
-const btnBlue={...btnOrange,background:'#1565C0'}
+const T = {
+  red: '#D62828',
+  black: '#0A0A0A',
+  cream: '#F5F0E8',
+  paper: '#FFFDF8',
+  ink: '#1A1A1A',
+  gray: '#6B6B6B',
+  lightgray: '#E0DAD0',
+  blue: '#1D3557',
+}
 
-// ── AI CHAT WIDGET ────────────────────────────────────────────────
+const inputS = {
+  width:'100%',
+  background:'#FFFDF8',
+  border:'2px solid #1A1A1A',
+  color:'#1A1A1A',
+  borderRadius:0,
+  padding:'0 10px',
+  height:36,
+  fontFamily:"'Inter', sans-serif",
+  fontSize:13,
+  outline:'none',
+}
+const selectS = {...inputS}
+
+const btnRed = {
+  cursor:'pointer',
+  border:'2px solid #D62828',
+  borderRadius:0,
+  fontFamily:"'Oswald', sans-serif",
+  fontSize:13,
+  letterSpacing:1,
+  textTransform:'uppercase',
+  display:'inline-flex',
+  alignItems:'center',
+  gap:6,
+  whiteSpace:'nowrap',
+  background:'#D62828',
+  color:'#FFFDF8',
+  padding:'0 18px',
+  height:38,
+  fontWeight:600,
+}
+const btnOutline = {
+  ...btnRed,
+  background:'transparent',
+  color:'#1A1A1A',
+  border:'2px solid #1A1A1A',
+}
+const btnGhost = {
+  ...btnRed,
+  background:'transparent',
+  color:'#D62828',
+  border:'2px solid #D62828',
+}
+const btnBlack = {
+  ...btnRed,
+  background:'#0A0A0A',
+  color:'#F5F0E8',
+  border:'2px solid #0A0A0A',
+}
+const btnGreen = {...btnRed, background:'#2D6A4F', border:'2px solid #2D6A4F'}
+const btnBlue2 = {...btnRed, background:'#1D3557', border:'2px solid #1D3557'}
+
+function TimerBar() {
+  const t = useTimer()
+  if (t.started) return (
+    <div style={{background:'#D62828',color:'#FFFDF8',height:48,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Bebas Neue',cursive",fontSize:22,letterSpacing:3,flexShrink:0}}>
+      МАРАФОН НАЧАЛСЯ — ВПЕРЁД!
+    </div>
+  )
+  return (
+    <div style={{background:'#0A0A0A',color:'#F5F0E8',height:48,display:'flex',alignItems:'center',justifyContent:'center',gap:32,flexShrink:0,flexWrap:'wrap',padding:'0 16px'}}>
+      {[['ДН', t.d], ['ЧС', t.h], ['МН', t.m], ['СК', t.s]].map(([lbl,val])=>(
+        <div key={lbl} style={{display:'flex',alignItems:'baseline',gap:5}}>
+          <span style={{fontFamily:"'Bebas Neue',cursive",fontSize:26,letterSpacing:2,color:'#D62828',minWidth:36,textAlign:'center'}}>{String(val||0).padStart(2,'0')}</span>
+          <span style={{fontFamily:"'Oswald',sans-serif",fontSize:10,letterSpacing:2,color:'#888',textTransform:'uppercase'}}>{lbl}</span>
+        </div>
+      ))}
+      <span style={{fontFamily:"'Oswald',sans-serif",fontSize:11,letterSpacing:2,color:'#888',textTransform:'uppercase'}}>до старта</span>
+    </div>
+  )
+}
+
+function Navbar({ onUsers, onRegister, onAdminLogin, session, isAdmin, onAdminLogout }) {
+  return (
+    <nav style={{background:'#FFFDF8',borderBottom:'3px solid #0A0A0A',height:64,display:'flex',alignItems:'center',padding:'0 24px',position:'sticky',top:0,zIndex:100,gap:12,flexShrink:0}}>
+      <div style={{display:'flex',alignItems:'center',gap:0,cursor:'pointer'}}>
+        <span style={{fontFamily:"'Bebas Neue',cursive",fontSize:28,letterSpacing:3,color:'#D62828',lineHeight:1}}>MARATHON</span>
+        <span style={{fontFamily:"'Bebas Neue',cursive",fontSize:28,letterSpacing:3,color:'#0A0A0A',lineHeight:1,marginLeft:8}}>SKILLS</span>
+        <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:'#888',marginLeft:10,paddingLeft:10,borderLeft:'2px solid #E0DAD0',lineHeight:1}}>2026</span>
+      </div>
+      <div style={{marginLeft:'auto',display:'flex',gap:8,alignItems:'center'}}>
+        {session?.user ? (
+          <>
+            {isAdmin && <span style={{background:'#0A0A0A',color:'#D62828',fontFamily:"'Oswald',sans-serif",fontSize:10,letterSpacing:2,padding:'3px 10px',textTransform:'uppercase'}}>ADMIN</span>}
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              {session.user.image && <img src={session.user.image} alt="" width={28} height={28} style={{borderRadius:0,border:'2px solid #0A0A0A'}}/>}
+              <span style={{fontFamily:"'Oswald',sans-serif",fontSize:13,color:'#1A1A1A',letterSpacing:1}}>{session.user.name?.split(' ')[0]}</span>
+            </div>
+            <button style={btnOutline} onClick={onUsers}>УЧАСТНИКИ</button>
+            <button style={btnRed} onClick={onRegister}>+ РЕГИСТРАЦИЯ</button>
+            {isAdmin
+              ? <button style={btnGhost} onClick={onAdminLogout}>ВЫЙТИ</button>
+              : <button style={btnOutline} onClick={onAdminLogin}>АДМИН</button>
+            }
+            <button style={{...btnOutline,padding:'0 10px',color:'#888',border:'2px solid #E0DAD0'}} onClick={() => signOut({callbackUrl:'/'})}>✕</button>
+          </>
+        ) : (
+          <button onClick={() => signIn('google', { callbackUrl: '/' })} style={{display:'inline-flex',alignItems:'center',gap:8,background:'#0A0A0A',color:'#FFFDF8',border:'none',borderRadius:0,padding:'10px 20px',fontFamily:"'Oswald',sans-serif",fontSize:13,letterSpacing:1,cursor:'pointer',textTransform:'uppercase'}}>
+            <svg width="16" height="16" viewBox="0 0 48 48">
+              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+            </svg>
+            Войти
+          </button>
+        )}
+      </div>
+    </nav>
+  )
+}
+
 function AIChatWidget({ open, onClose }) {
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: '👋 Привет! Я ИИ-ассистент марафона Marathon Skills 2026. Спроси меня о марафоне, подготовке, питании или регистрации!' }
+    { role: 'assistant', content: 'Привет! Я ИИ-ассистент Marathon Skills 2026. Спроси о подготовке, питании или регистрации.' }
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -117,45 +235,39 @@ function AIChatWidget({ open, onClose }) {
       const r = await fetch('/api/ai-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: newMsgs.slice(1).map(m => ({ role: m.role, content: m.content }))
-        })
+        body: JSON.stringify({ messages: newMsgs.slice(1).map(m => ({ role: m.role, content: m.content })) })
       })
       const data = await r.json()
       setMessages(prev => [...prev, { role: 'assistant', content: data.reply || '...' }])
     } catch (e) {
-      setMessages(prev => [...prev, { role: 'assistant', content: '❌ Ошибка соединения. Попробуй ещё раз.' }])
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Ошибка соединения. Попробуй ещё раз.' }])
     } finally {
       setLoading(false)
     }
   }
 
   if (!open) return null
-
-  const suggestions = ['Как подготовиться к марафону?', 'Что такое "стена" на 35 км?', 'Как рассчитать ИМТ?', 'Сколько пить воды во время забега?']
+  const suggestions = ['Как подготовиться к марафону?', 'Что такое «стена» на 35 км?', 'Как рассчитать ИМТ?', 'Сколько пить воды?']
 
   return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.65)',display:'flex',alignItems:'flex-end',justifyContent:'flex-end',zIndex:300,padding:'0 20px 80px 0'}}
+    <div style={{position:'fixed',inset:0,background:'rgba(10,10,10,.7)',display:'flex',alignItems:'flex-end',justifyContent:'flex-end',zIndex:300,padding:'0 24px 24px 0'}}
       onClick={e => e.target===e.currentTarget && onClose()}>
-      <div style={{background:'#14142A',border:'1px solid #2D2D46',borderRadius:12,width:'min(420px,95vw)',height:'min(600px,80vh)',display:'flex',flexDirection:'column',boxShadow:'0 8px 40px rgba(0,0,0,.5)'}}>
-        {/* Header */}
-        <div style={{background:'linear-gradient(135deg,#1C1C33,#252548)',borderBottom:'2px solid #E85D04',borderRadius:'12px 12px 0 0',padding:'12px 16px',display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
-          <div style={{width:36,height:36,borderRadius:'50%',background:'linear-gradient(135deg,#E85D04,#F4A33C)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>🤖</div>
-          <div>
-            <div style={{fontWeight:700,fontSize:13}}>ИИ-ассистент</div>
-            <div style={{fontSize:9,color:'#4CAF50'}}>● Онлайн · Marathon Skills 2026</div>
-          </div>
-          <button style={{...btnDark,marginLeft:'auto',height:28,padding:'0 10px',fontSize:11}} onClick={onClose}>✕</button>
+      <div style={{background:'#FFFDF8',border:'3px solid #0A0A0A',width:'min(420px,95vw)',height:'min(580px,80vh)',display:'flex',flexDirection:'column',boxShadow:'6px 6px 0 #D62828'}}>
+        <div style={{background:'#D62828',padding:'12px 16px',display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
+          <span style={{fontFamily:"'Bebas Neue',cursive",fontSize:18,letterSpacing:2,color:'#FFFDF8'}}>ИИ-АССИСТЕНТ</span>
+          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:'rgba(255,255,255,.6)',marginLeft:'auto',background:'rgba(0,0,0,.2)',padding:'2px 6px'}}>ONLINE</span>
+          <button style={{background:'transparent',border:'1px solid rgba(255,255,255,.4)',color:'#FFFDF8',cursor:'pointer',width:26,height:26,display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit',fontSize:12}} onClick={onClose}>✕</button>
         </div>
-
-        {/* Messages */}
-        <div style={{flex:1,overflowY:'auto',padding:'12px 14px',display:'flex',flexDirection:'column',gap:8}}>
+        <div style={{flex:1,overflowY:'auto',padding:'14px',display:'flex',flexDirection:'column',gap:10,background:'#F5F0E8'}}>
           {messages.map((m,i) => (
             <div key={i} style={{display:'flex',justifyContent:m.role==='user'?'flex-end':'flex-start'}}>
               <div style={{
-                maxWidth:'82%',padding:'8px 12px',borderRadius:m.role==='user'?'14px 14px 4px 14px':'14px 14px 14px 4px',
-                background:m.role==='user'?'#E85D04':'#1E1E36',border:m.role==='user'?'none':'1px solid #2D2D46',
-                fontSize:12,lineHeight:1.5,color:'#E8E8F5'
+                maxWidth:'82%',padding:'8px 12px',
+                background:m.role==='user'?'#0A0A0A':'#FFFDF8',
+                border:'2px solid #0A0A0A',
+                fontSize:12,lineHeight:1.5,
+                color:m.role==='user'?'#FFFDF8':'#1A1A1A',
+                fontFamily:"'Inter', sans-serif",
               }}>
                 {m.content}
               </div>
@@ -163,46 +275,37 @@ function AIChatWidget({ open, onClose }) {
           ))}
           {loading && (
             <div style={{display:'flex',justifyContent:'flex-start'}}>
-              <div style={{background:'#1E1E36',border:'1px solid #2D2D46',borderRadius:'14px 14px 14px 4px',padding:'8px 14px',fontSize:12,color:'#8C8CA5'}}>
-                💭 Думаю...
-              </div>
+              <div style={{background:'#FFFDF8',border:'2px solid #E0DAD0',padding:'8px 14px',fontSize:12,color:'#888',fontFamily:"'JetBrains Mono',monospace"}}>...</div>
             </div>
           )}
           <div ref={bottomRef}/>
         </div>
-
-        {/* Suggestions */}
         {messages.length <= 2 && (
-          <div style={{padding:'0 12px 6px',display:'flex',flexWrap:'wrap',gap:4,flexShrink:0}}>
+          <div style={{padding:'0 12px 8px',display:'flex',flexWrap:'wrap',gap:4,flexShrink:0,background:'#F5F0E8'}}>
             {suggestions.map(s => (
-              <button key={s} style={{background:'#23233E',border:'1px solid #35355A',borderRadius:12,padding:'4px 10px',fontSize:10,color:'#8C8CA5',cursor:'pointer',fontFamily:'inherit'}}
-                onClick={() => { setInput(s) }}>
+              <button key={s} style={{background:'transparent',border:'1px solid #E0DAD0',padding:'4px 10px',fontSize:10,color:'#6B6B6B',cursor:'pointer',fontFamily:"'Inter',sans-serif"}}
+                onClick={() => setInput(s)}>
                 {s}
               </button>
             ))}
           </div>
         )}
-
-        {/* Input */}
-        <div style={{padding:'10px 12px',borderTop:'1px solid #2D2D46',display:'flex',gap:8,flexShrink:0}}>
+        <div style={{padding:'10px 12px',borderTop:'2px solid #0A0A0A',display:'flex',gap:8,flexShrink:0,background:'#FFFDF8'}}>
           <input
-            style={{...inputStyle,flex:1,borderRadius:20,height:36,padding:'0 14px'}}
-            placeholder="Задай вопрос о марафоне..."
+            style={{...inputS,flex:1,height:38}}
+            placeholder="Задайте вопрос..."
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key==='Enter' && send()}
             disabled={loading}
           />
-          <button style={{...btnOrange,height:36,width:36,padding:0,borderRadius:'50%',justifyContent:'center'}} onClick={send} disabled={loading}>
-            ➤
-          </button>
+          <button style={btnRed} onClick={send} disabled={loading}>→</button>
         </div>
       </div>
     </div>
   )
 }
 
-// ── IMPORT MODAL ──────────────────────────────────────────────────
 function ImportModal({ open, onClose, onImported }) {
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
@@ -242,7 +345,7 @@ function ImportModal({ open, onClose, onImported }) {
       })
       const data = await r.json()
       if (!r.ok) { setError(data.error); return }
-      setStatus(`✅ Импортировано: ${data.imported} участников${data.skipped ? `, пропущено: ${data.skipped}` : ''}`)
+      setStatus(`Импортировано: ${data.imported} участников${data.skipped ? `, пропущено: ${data.skipped}` : ''}`)
       onImported()
     } catch (e) {
       setError('Ошибка импорта: ' + e.message)
@@ -253,85 +356,31 @@ function ImportModal({ open, onClose, onImported }) {
 
   if (!open) return null
   return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:250}}
+    <div style={{position:'fixed',inset:0,background:'rgba(10,10,10,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:250}}
       onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{background:'#14142A',border:'1px solid #2D2D46',borderRadius:8,width:'min(480px,92vw)',padding:28}}>
-        <div style={{fontSize:16,fontWeight:700,marginBottom:6}}>📥 Импорт из CSV</div>
-        <div style={{fontSize:10,color:'#8C8CA5',marginBottom:16,lineHeight:1.6}}>
-          Файл должен содержать колонки: <b>email, name (Имя), surname (Фамилия)</b> — обязательные.<br/>
-          Опциональные: gender (Пол), role (Роль), country (Страна), dob (Дата рождения), bmi (ИМТ).<br/>
-          Первая строка — заголовки. Кодировка UTF-8.
+      <div style={{background:'#FFFDF8',border:'3px solid #0A0A0A',width:'min(480px,92vw)',padding:28,boxShadow:'6px 6px 0 #D62828'}}>
+        <div style={{fontFamily:"'Bebas Neue',cursive",fontSize:22,letterSpacing:2,marginBottom:6,color:'#0A0A0A'}}>ИМПОРТ ИЗ CSV</div>
+        <div style={{fontSize:11,color:'#888',marginBottom:16,lineHeight:1.7,fontFamily:"'Inter',sans-serif"}}>
+          Обязательные колонки: <strong style={{color:'#1A1A1A'}}>email, name, surname</strong><br/>
+          Опциональные: gender, role, country, dob, bmi. Кодировка UTF-8.
         </div>
-        <div style={{background:'#1E1E36',border:'1px dashed #35355A',borderRadius:6,padding:'20px',textAlign:'center',cursor:'pointer',marginBottom:14}}
+        <div style={{background:'#F5F0E8',border:'2px dashed #E0DAD0',padding:'24px',textAlign:'center',cursor:'pointer',marginBottom:14}}
           onClick={() => fileRef.current?.click()}>
-          <div style={{fontSize:28,marginBottom:6}}>📁</div>
-          <div style={{fontSize:12,color:'#8C8CA5'}}>Нажмите для выбора CSV-файла</div>
+          <div style={{fontFamily:"'Bebas Neue',cursive",fontSize:28,letterSpacing:2,color:'#E0DAD0',marginBottom:6}}>CSV</div>
+          <div style={{fontSize:12,color:'#888',fontFamily:"'Inter',sans-serif"}}>Нажмите для выбора файла</div>
           <input ref={fileRef} type="file" accept=".csv,text/csv" style={{display:'none'}} onChange={handleFile}/>
         </div>
-        {loading && <div style={{textAlign:'center',color:'#F4A33C',fontSize:11,marginBottom:10}}>⏳ Импортируем...</div>}
-        {status && <div style={{background:'rgba(76,175,80,.15)',border:'1px solid #4CAF50',borderRadius:4,padding:'8px 12px',fontSize:11,color:'#4CAF50',marginBottom:10}}>{status}</div>}
-        {error && <div style={{background:'rgba(232,93,4,.15)',border:'1px solid #E85D04',borderRadius:4,padding:'8px 12px',fontSize:11,color:'#E85D04',marginBottom:10}}>{error}</div>}
+        {loading && <div style={{textAlign:'center',color:'#888',fontSize:11,marginBottom:10,fontFamily:"'JetBrains Mono',monospace"}}>загрузка...</div>}
+        {status && <div style={{background:'#F0FFF4',border:'2px solid #2D6A4F',padding:'8px 12px',fontSize:11,color:'#2D6A4F',marginBottom:10,fontFamily:"'Inter',sans-serif"}}>{status}</div>}
+        {error && <div style={{background:'#FFF0F0',border:'2px solid #D62828',padding:'8px 12px',fontSize:11,color:'#D62828',marginBottom:10,fontFamily:"'Inter',sans-serif"}}>{error}</div>}
         <div style={{display:'flex',justifyContent:'flex-end',gap:8}}>
-          <button style={{...btnDark,height:34}} onClick={onClose}>Закрыть</button>
+          <button style={btnOutline} onClick={onClose}>ЗАКРЫТЬ</button>
         </div>
       </div>
     </div>
   )
 }
 
-// ── NAVBAR ────────────────────────────────────────────────────────
-function Navbar({ onUsers, onRegister, onAdminLogin, session, isAdmin, onAdminLogout }) {
-  return (
-    <nav style={{background:'#1C1C33',borderBottom:'2px solid #E85D04',height:58,display:'flex',alignItems:'center',padding:'0 14px',position:'sticky',top:0,zIndex:100,gap:10,flexShrink:0}}>
-      <div style={{display:'flex',alignItems:'center',gap:10}}>
-        <span style={{fontSize:24}}>🏃</span>
-        <div>
-          <div style={{fontSize:13,fontWeight:700}}>MARATHON SKILLS</div>
-          <div style={{fontSize:9,color:'#E85D04'}}>2026</div>
-        </div>
-      </div>
-      <div style={{marginLeft:'auto',display:'flex',gap:8,alignItems:'center'}}>
-        {session?.user ? (
-          <>
-            {isAdmin && <span style={{background:'#2D1F00',border:'1px solid #E85D04',borderRadius:4,padding:'3px 8px',fontSize:9,fontWeight:700,color:'#E85D04'}}>🔑 АДМИНИСТРАТОР</span>}
-            <div style={{display:'flex',alignItems:'center',gap:8}}>
-              {session.user.image && <img src={session.user.image} alt="" width={28} height={28} style={{borderRadius:'50%',border:'2px solid #E85D04'}}/>}
-              <span style={{fontSize:10,color:'#E8E8F5',maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{session.user.name?.split(' ')[0]}</span>
-            </div>
-            <button style={btnNav} onClick={onUsers}>👥 &nbsp;Участники</button>
-            <button style={btnOrange} onClick={onRegister}>✚ &nbsp;Регистрация</button>
-            {isAdmin
-              ? <button style={{...btnNav,color:'#F4A33C'}} onClick={onAdminLogout}>🚪 &nbsp;Выйти из адм.</button>
-              : <button style={btnNav} onClick={onAdminLogin}>🔒 &nbsp;Админ</button>
-            }
-            <button style={{...btnNav,color:'#8C8CA5'}} onClick={() => signOut({callbackUrl:'/'})}>⏻</button>
-          </>
-        ) : (
-          <button onClick={() => signIn('google', { callbackUrl: '/' })} style={{display:'inline-flex',alignItems:'center',gap:8,background:'#fff',color:'#1a1a2e',border:'none',borderRadius:6,padding:'7px 16px',fontSize:12,fontWeight:600,cursor:'pointer'}}>
-            <svg width="16" height="16" viewBox="0 0 48 48">
-              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-            </svg>
-            Войти через Google
-          </button>
-        )}
-      </div>
-    </nav>
-  )
-}
-
-function TimerBar() {
-  const time = useTimer()
-  return (
-    <div style={{background:'#11111F',borderTop:'2px solid #E85D04',height:40,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#E85D04',flexShrink:0}}>
-      {time}
-    </div>
-  )
-}
-
-// ── REGISTER MODAL ────────────────────────────────────────────────
 function RegisterModal({ open, onClose, onSave, editData }) {
   const isEdit = !!editData
   const [form, setForm] = useState({email:'',password:'',password2:'',name:'',surname:'',gender:'Мужской',role:'Бегун',country:'Казахстан',dob:'1990-01-01',photo:'',photoName:''})
@@ -359,56 +408,72 @@ function RegisterModal({ open, onClose, onSave, editData }) {
   }
 
   if (!open) return null
+  const Label = ({children}) => <label style={{color:'#888',fontFamily:"'Oswald',sans-serif",fontSize:11,letterSpacing:1,textTransform:'uppercase',display:'block',marginBottom:4}}>{children}</label>
   return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200}} onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{background:'#14142A',border:'1px solid #2D2D46',borderRadius:8,width:'min(860px,95vw)',maxHeight:'90vh',overflow:'hidden',display:'flex',flexDirection:'column'}}>
-        <div style={{background:'#1C1C33',borderBottom:'2px solid #E85D04',height:52,display:'flex',alignItems:'center',padding:'0 14px',gap:10,flexShrink:0}}>
-          <button style={btnNav} onClick={onClose}>← Назад</button>
-          <span style={{fontSize:12,fontWeight:700}}>MARATHON SKILLS 2026</span>
+    <div style={{position:'fixed',inset:0,background:'rgba(10,10,10,.75)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{background:'#FFFDF8',border:'3px solid #0A0A0A',width:'min(860px,95vw)',maxHeight:'90vh',overflow:'hidden',display:'flex',flexDirection:'column',boxShadow:'8px 8px 0 #D62828'}}>
+        <div style={{background:'#0A0A0A',height:52,display:'flex',alignItems:'center',padding:'0 20px',gap:10,flexShrink:0}}>
+          <button style={{...btnGhost,height:30,padding:'0 12px',fontSize:11,border:'1px solid #D62828'}} onClick={onClose}>← НАЗАД</button>
+          <span style={{fontFamily:"'Bebas Neue',cursive",fontSize:18,letterSpacing:3,color:'#FFFDF8',marginLeft:8}}>{isEdit?'РЕДАКТИРОВАНИЕ':'РЕГИСТРАЦИЯ УЧАСТНИКА'}</span>
         </div>
-        <div style={{flex:1,overflowY:'auto',padding:'16px 30px 20px'}}>
-          <div style={{fontSize:20,fontWeight:700,color:'#F4A33C',textAlign:'center',marginBottom:4}}>{isEdit?'Редактирование':'Регистрация участника'}</div>
-          <div style={{fontSize:10,color:'#8C8CA5',textAlign:'center',marginBottom:14}}>Заполните все поля для регистрации участника марафона</div>
-          <div style={{background:'#1E1E36',border:'1px solid #2D2D46',borderRadius:6,padding:'20px'}}>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 220px',gap:20}}>
-              <div style={{display:'grid',gridTemplateColumns:'130px 1fr',gap:8,alignItems:'center'}}>
-                <label style={{color:'#8C8CA5'}}>Email:</label>
-                <input style={inputStyle} value={form.email} onChange={e=>set('email',e.target.value)} placeholder="user@example.com"/>
-                {!isEdit && <>
-                  <label style={{color:'#8C8CA5'}}>Пароль:</label>
-                  <input style={inputStyle} type="password" value={form.password} onChange={e=>set('password',e.target.value)} placeholder="Минимум 6 символов"/>
-                  <label style={{color:'#8C8CA5'}}>Повтор пароля:</label>
-                  <input style={inputStyle} type="password" value={form.password2} onChange={e=>set('password2',e.target.value)}/>
-                </>}
-                <label style={{color:'#8C8CA5'}}>Имя:</label>
-                <input style={inputStyle} value={form.name} onChange={e=>set('name',e.target.value)}/>
-                <label style={{color:'#8C8CA5'}}>Фамилия:</label>
-                <input style={inputStyle} value={form.surname} onChange={e=>set('surname',e.target.value)}/>
-                <label style={{color:'#8C8CA5'}}>Пол:</label>
-                <select style={selectStyle} value={form.gender} onChange={e=>set('gender',e.target.value)}><option>Мужской</option><option>Женский</option></select>
-                <label style={{color:'#8C8CA5'}}>Роль:</label>
-                <select style={selectStyle} value={form.role} onChange={e=>set('role',e.target.value)}><option>Бегун</option><option>Координатор</option></select>
-              </div>
+        <div style={{flex:1,overflowY:'auto',padding:'24px 30px 24px'}}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 220px',gap:24}}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr',gap:12}}>
               <div>
-                <div style={{background:'#23233E',border:'1px solid #3C3C5A',height:120,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',borderRadius:4,overflow:'hidden'}} onClick={()=>document.getElementById('photoFileInput').click()}>
-                  {form.photo ? <img src={form.photo} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <div style={{textAlign:'center'}}><div style={{fontSize:26}}>📷</div><div style={{fontSize:9,color:'#8C8CA5'}}>Нажмите для выбора</div></div>}
+                <Label>Email</Label>
+                <input style={inputS} value={form.email} onChange={e=>set('email',e.target.value)} placeholder="user@example.com"/>
+              </div>
+              {!isEdit && <>
+                <div>
+                  <Label>Пароль</Label>
+                  <input style={inputS} type="password" value={form.password} onChange={e=>set('password',e.target.value)} placeholder="Минимум 6 символов"/>
                 </div>
-                <input type="file" id="photoFileInput" accept="image/*" style={{display:'none'}} onChange={onPhoto}/>
-                <div style={{marginTop:6,display:'flex',gap:5}}>
-                  <input style={{...inputStyle,height:26,fontSize:9,color:'#8C8CA5'}} readOnly value={form.photoName}/>
-                  <button style={{...btnDark,height:26,padding:'0 8px',fontSize:13}} onClick={()=>document.getElementById('photoFileInput').click()}>📁</button>
+                <div>
+                  <Label>Повтор пароля</Label>
+                  <input style={inputS} type="password" value={form.password2} onChange={e=>set('password2',e.target.value)}/>
                 </div>
-                <label style={{color:'#8C8CA5',display:'block',marginBottom:4,fontSize:10,marginTop:12}}>Дата рождения:</label>
-                <input style={inputStyle} type="date" value={form.dob} onChange={e=>set('dob',e.target.value)}/>
-                <label style={{color:'#8C8CA5',display:'block',marginBottom:4,fontSize:10,marginTop:10}}>Страна:</label>
-                <select style={selectStyle} value={form.country} onChange={e=>set('country',e.target.value)}>{COUNTRIES.map(c=><option key={c}>{c}</option>)}</select>
+              </>}
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <div>
+                  <Label>Имя</Label>
+                  <input style={inputS} value={form.name} onChange={e=>set('name',e.target.value)}/>
+                </div>
+                <div>
+                  <Label>Фамилия</Label>
+                  <input style={inputS} value={form.surname} onChange={e=>set('surname',e.target.value)}/>
+                </div>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <div>
+                  <Label>Пол</Label>
+                  <select style={selectS} value={form.gender} onChange={e=>set('gender',e.target.value)}><option>Мужской</option><option>Женский</option></select>
+                </div>
+                <div>
+                  <Label>Роль</Label>
+                  <select style={selectS} value={form.role} onChange={e=>set('role',e.target.value)}><option>Бегун</option><option>Координатор</option></select>
+                </div>
+              </div>
+            </div>
+            <div>
+              <Label>Фото</Label>
+              <div style={{background:'#F5F0E8',border:'2px solid #E0DAD0',height:120,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',overflow:'hidden',marginBottom:8}} onClick={()=>document.getElementById('photoFileInput').click()}>
+                {form.photo ? <img src={form.photo} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/> : <div style={{textAlign:'center'}}><div style={{fontFamily:"'Bebas Neue',cursive",fontSize:28,color:'#E0DAD0',letterSpacing:2}}>ФОТО</div><div style={{fontSize:9,color:'#888',fontFamily:"'Inter',sans-serif"}}>нажмите для выбора</div></div>}
+              </div>
+              <input type="file" id="photoFileInput" accept="image/*" style={{display:'none'}} onChange={onPhoto}/>
+              <div>
+                <Label>Дата рождения</Label>
+                <input style={inputS} type="date" value={form.dob} onChange={e=>set('dob',e.target.value)}/>
+              </div>
+              <div style={{marginTop:12}}>
+                <Label>Страна</Label>
+                <select style={selectS} value={form.country} onChange={e=>set('country',e.target.value)}>{COUNTRIES.map(c=><option key={c}>{c}</option>)}</select>
               </div>
             </div>
           </div>
-          {msg.text && <div style={{textAlign:'center',fontWeight:700,fontSize:11,padding:8,borderRadius:4,margin:'10px 0',background:msg.ok?'rgba(76,175,80,.15)':'rgba(232,93,4,.15)',color:msg.ok?'#4CAF50':'#E85D04'}}>{msg.text}</div>}
-          <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:4}}>
-            <button style={{...btnOrange,height:40,fontSize:12,padding:'0 22px'}} onClick={submit}>✔ &nbsp;{isEdit?'Сохранить':'Зарегистрироваться'}</button>
-            <button style={{...btnDark,height:40,fontSize:11,padding:'0 18px'}} onClick={onClose}>Отмена</button>
+          {msg.text && <div style={{textAlign:'center',fontWeight:600,fontSize:12,padding:'10px',margin:'14px 0 0',background:msg.ok?'#F0FFF4':'#FFF0F0',border:`2px solid ${msg.ok?'#2D6A4F':'#D62828'}`,color:msg.ok?'#2D6A4F':'#D62828',fontFamily:"'Inter',sans-serif"}}>{msg.text}</div>}
+          <div style={{display:'flex',gap:10,justifyContent:'center',marginTop:16}}>
+            <button style={{...btnRed,height:42,fontSize:13,padding:'0 28px'}} onClick={submit}>{isEdit?'СОХРАНИТЬ':'ЗАРЕГИСТРИРОВАТЬСЯ'}</button>
+            <button style={{...btnOutline,height:42}} onClick={onClose}>ОТМЕНА</button>
           </div>
         </div>
       </div>
@@ -416,40 +481,39 @@ function RegisterModal({ open, onClose, onSave, editData }) {
   )
 }
 
-// ── PROFILE MODAL ─────────────────────────────────────────────────
 function ProfileModal({ open, onClose, participant, isAdmin, onEdit, onBMI }) {
   if (!open||!participant) return null
   const p = participant
   const months=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря']
   const formatDate=(dob)=>{ if(!dob)return'—'; const[y,m,d]=dob.split('-'); return`${parseInt(d)} ${months[parseInt(m)-1]} ${y}` }
   return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200}} onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{background:'#14142A',border:'1px solid #2D2D46',borderRadius:8,width:'min(600px,95vw)',maxHeight:'90vh',overflow:'hidden',display:'flex',flexDirection:'column'}}>
-        <div style={{background:'#1C1C33',borderBottom:'2px solid #E85D04',height:52,display:'flex',alignItems:'center',padding:'0 14px',gap:10}}>
-          <button style={btnNav} onClick={onClose}>← Закрыть</button>
-          <span style={{fontSize:12,fontWeight:700}}>ПРОФИЛЬ УЧАСТНИКА</span>
-          {isAdmin && <button style={{...btnOrange,height:32,padding:'0 12px',marginLeft:'auto'}} onClick={()=>onEdit(p)}>✏️ &nbsp;Редактировать</button>}
+    <div style={{position:'fixed',inset:0,background:'rgba(10,10,10,.75)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:200}} onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={{background:'#FFFDF8',border:'3px solid #0A0A0A',width:'min(560px,95vw)',maxHeight:'90vh',overflow:'hidden',display:'flex',flexDirection:'column',boxShadow:'8px 8px 0 #D62828'}}>
+        <div style={{background:'#0A0A0A',height:52,display:'flex',alignItems:'center',padding:'0 20px',gap:10}}>
+          <button style={{...btnGhost,height:30,padding:'0 12px',fontSize:11,border:'1px solid #D62828'}} onClick={onClose}>← ЗАКРЫТЬ</button>
+          <span style={{fontFamily:"'Bebas Neue',cursive",fontSize:18,letterSpacing:3,color:'#FFFDF8',marginLeft:8}}>ПРОФИЛЬ</span>
+          {isAdmin && <button style={{...btnRed,height:30,padding:'0 12px',fontSize:11,marginLeft:'auto'}} onClick={()=>onEdit(p)}>РЕДАКТИРОВАТЬ</button>}
         </div>
-        <div style={{flex:1,overflowY:'auto',padding:'16px 30px 20px'}}>
-          <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:20}}>
-            <div style={{width:80,height:80,background:'#23233E',borderRadius:'50%',border:'2px solid #2D2D46',display:'flex',alignItems:'center',justifyContent:'center',fontSize:40,overflow:'hidden',flexShrink:0}}>
-              {p.photo?<img src={p.photo} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span>{p.gender==='Женский'?'👩':'👨'}</span>}
+        <div style={{flex:1,overflowY:'auto',padding:'24px 28px'}}>
+          <div style={{display:'flex',alignItems:'center',gap:16,marginBottom:20,paddingBottom:20,borderBottom:'2px solid #E0DAD0'}}>
+            <div style={{width:80,height:80,background:'#F5F0E8',border:'2px solid #E0DAD0',display:'flex',alignItems:'center',justifyContent:'center',fontSize:40,overflow:'hidden',flexShrink:0}}>
+              {p.photo?<img src={p.photo} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>:<span>{p.gender==='Женский'?'♀':'♂'}</span>}
             </div>
             <div>
-              <div style={{fontSize:22,fontWeight:700}}>{p.name} {p.surname}</div>
-              <div style={{fontSize:13,fontWeight:600,color:p.role==='Бегун'?'rgb(120,200,255)':'#6C63FF'}}>{p.role}</div>
-              <div style={{fontSize:11,color:'#8C8CA5'}}>{p.email}</div>
+              <div style={{fontFamily:"'Bebas Neue',cursive",fontSize:28,letterSpacing:2,color:'#0A0A0A',lineHeight:1}}>{p.name} {p.surname}</div>
+              <div style={{fontFamily:"'Oswald',sans-serif",fontSize:12,letterSpacing:2,color:'#D62828',textTransform:'uppercase',marginTop:4}}>{p.role}</div>
+              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:'#888',marginTop:2}}>{p.email}</div>
             </div>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:16}}>
-            {[['📧 Email',p.email],['⚧ Пол',p.gender],['🎂 Дата рождения',formatDate(p.dob)],['🌍 Страна',p.country||'—'],['📊 ИМТ',p.bmi?p.bmi.toFixed(1):'—'],['🏷 Роль',p.role],['📅 Зарегистрирован',p.created_at?new Date(p.created_at).toLocaleDateString('ru'):'—']].map(([lbl,val])=>(
-              <div key={lbl} style={{background:'#23233E',borderRadius:4,padding:'10px 12px'}}>
-                <div style={{fontSize:9,color:'#8C8CA5',marginBottom:2}}>{lbl}</div>
-                <div style={{fontSize:12,fontWeight:500}}>{val}</div>
+            {[['Пол',p.gender],['Дата рождения',formatDate(p.dob)],['Страна',p.country||'—'],['ИМТ',p.bmi?p.bmi.toFixed(1):'—'],['Роль',p.role],['Зарегистрирован',p.created_at?new Date(p.created_at).toLocaleDateString('ru'):'—']].map(([lbl,val])=>(
+              <div key={lbl} style={{background:'#F5F0E8',border:'1px solid #E0DAD0',padding:'10px 14px'}}>
+                <div style={{fontFamily:"'Oswald',sans-serif",fontSize:9,letterSpacing:2,color:'#888',textTransform:'uppercase',marginBottom:4}}>{lbl}</div>
+                <div style={{fontFamily:"'Inter',sans-serif",fontSize:13,fontWeight:500,color:'#1A1A1A'}}>{val}</div>
               </div>
             ))}
           </div>
-          {isAdmin && <div style={{display:'flex',gap:10,justifyContent:'center'}}><button style={{...btnOrange,height:36}} onClick={()=>onBMI(p)}>📊 &nbsp;Рассчитать ИМТ</button></div>}
+          {isAdmin && <div style={{display:'flex',gap:10,justifyContent:'center'}}><button style={btnRed} onClick={()=>onBMI(p)}>РАССЧИТАТЬ ИМТ</button></div>}
         </div>
       </div>
     </div>
@@ -459,20 +523,19 @@ function ProfileModal({ open, onClose, participant, isAdmin, onEdit, onBMI }) {
 function ConfirmModal({ open, name, onConfirm, onCancel }) {
   if (!open) return null
   return (
-    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:300}}>
-      <div style={{background:'#1E1E36',border:'1px solid #2D2D46',borderRadius:8,padding:'28px 36px',textAlign:'center',width:'min(400px,90vw)'}}>
-        <div style={{fontSize:16,fontWeight:700,marginBottom:8}}>Удалить участника?</div>
-        <div style={{fontSize:11,color:'#8C8CA5',marginBottom:24}}>{name}</div>
+    <div style={{position:'fixed',inset:0,background:'rgba(10,10,10,.75)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:300}}>
+      <div style={{background:'#FFFDF8',border:'3px solid #D62828',padding:'32px 40px',textAlign:'center',width:'min(380px,90vw)',boxShadow:'6px 6px 0 #0A0A0A'}}>
+        <div style={{fontFamily:"'Bebas Neue',cursive",fontSize:24,letterSpacing:2,marginBottom:8,color:'#D62828'}}>УДАЛИТЬ УЧАСТНИКА?</div>
+        <div style={{fontSize:13,color:'#888',marginBottom:24,fontFamily:"'Inter',sans-serif"}}>{name}</div>
         <div style={{display:'flex',gap:10,justifyContent:'center'}}>
-          <button style={{...btnOrange,background:'#B71C1C',height:36}} onClick={onConfirm}>🗑 Удалить</button>
-          <button style={{...btnDark,height:36}} onClick={onCancel}>Отмена</button>
+          <button style={{...btnRed,background:'#D62828'}} onClick={onConfirm}>УДАЛИТЬ</button>
+          <button style={btnOutline} onClick={onCancel}>ОТМЕНА</button>
         </div>
       </div>
     </div>
   )
 }
 
-// ── BMI PAGE ──────────────────────────────────────────────────────
 function BMIPage({ runner, onBack, onSave }) {
   const [height, setHeight] = useState('170')
   const [weight, setWeight] = useState('70')
@@ -487,44 +550,43 @@ function BMIPage({ runner, onBack, onSave }) {
   const color=bmiColor(bmiVal), cat=bmiCategory(bmiVal)
 
   return (
-    <div style={{display:'flex',flexDirection:'column',height:'100vh'}}>
-      <nav style={{background:'#1C1C33',borderBottom:'2px solid #E85D04',height:52,display:'flex',alignItems:'center',padding:'0 14px',gap:10,flexShrink:0}}>
-        <button style={{...btnNav,height:36}} onClick={onBack}>← Назад</button>
-        <span style={{fontSize:12,fontWeight:700,margin:'0 auto'}}>ИМТ КАЛЬКУЛЯТОР</span>
-        <button style={{...btnOrange,height:36,width:140}} onClick={()=>{ if(!bmiVal){alert('Сначала рассчитайте ИМТ.');return} onSave(bmiVal) }}>💾 &nbsp;Сохранить</button>
+    <div style={{display:'flex',flexDirection:'column',height:'100vh',background:'#F5F0E8'}}>
+      <nav style={{background:'#0A0A0A',height:52,display:'flex',alignItems:'center',padding:'0 20px',gap:10,flexShrink:0}}>
+        <button style={{...btnGhost,height:30,padding:'0 12px',fontSize:11,border:'1px solid #D62828'}} onClick={onBack}>← НАЗАД</button>
+        <span style={{fontFamily:"'Bebas Neue',cursive",fontSize:18,letterSpacing:3,color:'#FFFDF8',margin:'0 auto'}}>ИМТ КАЛЬКУЛЯТОР</span>
+        <button style={{...btnRed,height:30,width:140,fontSize:11}} onClick={()=>{ if(!bmiVal){alert('Сначала рассчитайте ИМТ.');return} onSave(bmiVal) }}>СОХРАНИТЬ</button>
       </nav>
-      <div style={{flex:1,overflowY:'auto',padding:20}}>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,height:'calc(100% - 20px)'}}>
-          <div style={{background:'#1E1E36',border:'1px solid #2D2D46',borderRadius:6,padding:18}}>
-            <p style={{fontSize:10,color:'#8C8CA5',marginBottom:18,lineHeight:1.5}}>ИМТ = вес (кг) / рост² (м)</p>
-            <div style={{marginBottom:14}}>
-              <span style={{color:'#8C8CA5'}}>Пол:&nbsp;</span>
-              {['Мужской','Женский'].map(g=>(<label key={g} style={{color:'#E8E8F5',cursor:'pointer',marginRight:16,display:'inline-flex',alignItems:'center',gap:6}}><input type="radio" name="bmiGender" value={g} checked={gender===g} onChange={()=>setGender(g)}/> {g==='Мужской'?'♂':'♀'} {g}</label>))}
+      <div style={{flex:1,overflowY:'auto',padding:24}}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,height:'calc(100% - 20px)'}}>
+          <div style={{background:'#FFFDF8',border:'2px solid #E0DAD0',padding:20}}>
+            <p style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:'#888',marginBottom:18,lineHeight:1.6}}>ИМТ = масса (кг) / рост² (м)</p>
+            <div style={{marginBottom:16}}>
+              <div style={{fontFamily:"'Oswald',sans-serif",fontSize:10,letterSpacing:2,color:'#888',textTransform:'uppercase',marginBottom:8}}>Пол</div>
+              {['Мужской','Женский'].map(g=>(<label key={g} style={{color:'#1A1A1A',cursor:'pointer',marginRight:20,display:'inline-flex',alignItems:'center',gap:6,fontFamily:"'Inter',sans-serif",fontSize:13}}><input type="radio" name="bmiGender" value={g} checked={gender===g} onChange={()=>setGender(g)}/> {g}</label>))}
             </div>
-            {[['Рост','bmiH',height,setHeight,'см'],['Вес','bmiW',weight,setWeight,'кг']].map(([lbl,id,val,setter,unit])=>(
-              <div key={id} style={{display:'grid',gridTemplateColumns:'100px 90px auto',alignItems:'center',gap:8,marginBottom:14}}>
-                <label style={{color:'#8C8CA5'}}>{lbl}:</label>
-                <input style={{...inputStyle,height:32}} value={val} onChange={e=>setter(e.target.value.replace(/[^\d]/g,''))}/>
-                <span style={{color:'#8C8CA5',fontSize:11}}>{unit}</span>
+            {[['Рост',height,setHeight,'см'],['Вес',weight,setWeight,'кг']].map(([lbl,val,setter,unit])=>(
+              <div key={lbl} style={{marginBottom:14}}>
+                <div style={{fontFamily:"'Oswald',sans-serif",fontSize:10,letterSpacing:2,color:'#888',textTransform:'uppercase',marginBottom:4}}>{lbl} ({unit})</div>
+                <input style={inputS} value={val} onChange={e=>setter(e.target.value.replace(/[^\d]/g,''))}/>
               </div>
             ))}
             <div style={{display:'flex',gap:10}}>
-              <button style={{...btnOrange,height:40,fontSize:11}} onClick={calc}>▶ &nbsp;Рассчитать</button>
-              <button style={{...btnDark,height:40,fontSize:11}} onClick={()=>setBmiVal(0)}>Сброс</button>
+              <button style={btnRed} onClick={calc}>РАССЧИТАТЬ</button>
+              <button style={btnOutline} onClick={()=>setBmiVal(0)}>СБРОС</button>
             </div>
           </div>
-          <div style={{display:'flex',flexDirection:'column',gap:10}}>
-            <div style={{background:'#1E1E36',border:'1px solid #2D2D46',borderRadius:6,height:160,overflow:'hidden'}}><canvas ref={figRef} style={{width:'100%',height:'100%'}}/></div>
-            <div style={{background:'#1E1E36',border:'1px solid #2D2D46',borderRadius:6,height:90,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:12}}>
-              <div style={{fontSize:30,fontWeight:700,color:bmiVal?color:'#E8E8F5'}}>{bmiVal?bmiVal.toFixed(1):'—'}</div>
-              <div style={{fontSize:15,fontWeight:700,color}}>{cat}</div>
+          <div style={{display:'flex',flexDirection:'column',gap:14}}>
+            <div style={{background:'#FFFDF8',border:'2px solid #E0DAD0',height:160,overflow:'hidden'}}><canvas ref={figRef} style={{width:'100%',height:'100%'}}/></div>
+            <div style={{background:'#FFFDF8',border:'2px solid #E0DAD0',height:90,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:12}}>
+              <div style={{fontFamily:"'Bebas Neue',cursive",fontSize:42,color:bmiVal?color:'#E0DAD0',letterSpacing:2,lineHeight:1}}>{bmiVal?bmiVal.toFixed(1):'--.-'}</div>
+              <div style={{fontFamily:"'Oswald',sans-serif",fontSize:13,color,letterSpacing:1,textTransform:'uppercase'}}>{cat||'введите данные'}</div>
             </div>
-            <div style={{background:'#1E1E36',border:'1px solid #2D2D46',borderRadius:6,height:72,overflow:'hidden',padding:'8px 12px'}}><canvas ref={gaugeRef} style={{width:'100%',height:'100%'}}/></div>
+            <div style={{background:'#FFFDF8',border:'2px solid #E0DAD0',height:72,overflow:'hidden',padding:'8px 12px'}}><canvas ref={gaugeRef} style={{width:'100%',height:'100%'}}/></div>
           </div>
         </div>
       </div>
-      <div style={{background:'#1C1C33',borderTop:'1px solid #E85D04',height:44,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-        <span style={{fontSize:11,fontWeight:600}}>👤 {runner?`${runner.name} ${runner.surname}`:'...'}</span>
+      <div style={{background:'#0A0A0A',height:44,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+        <span style={{fontFamily:"'Oswald',sans-serif",fontSize:13,letterSpacing:2,color:'#F5F0E8',textTransform:'uppercase'}}>{runner?`${runner.name} ${runner.surname}`:'...'}</span>
       </div>
     </div>
   )
@@ -534,25 +596,25 @@ function AdminLoginPage({ onBack, onLogin }) {
   const [login, setLogin] = useState(''), [pass, setPass] = useState(''), [err, setErr] = useState('')
   const doLogin = () => { if(login==='admin'&&pass==='admin123'){onLogin();setErr('')} else setErr('Неверный логин или пароль') }
   return (
-    <div style={{display:'flex',flexDirection:'column',height:'100vh'}}>
-      <nav style={{background:'#1C1C33',borderBottom:'2px solid #E85D04',height:58,display:'flex',alignItems:'center',padding:'0 14px',gap:10}}>
-        <button style={btnNav} onClick={onBack}>← Назад</button>
-        <span style={{fontSize:12,fontWeight:700,marginLeft:16}}>MARATHON SKILLS 2026</span>
+    <div style={{display:'flex',flexDirection:'column',height:'100vh',background:'#F5F0E8'}}>
+      <nav style={{background:'#0A0A0A',height:58,display:'flex',alignItems:'center',padding:'0 20px',gap:10}}>
+        <button style={{...btnGhost,border:'1px solid #D62828',height:30,padding:'0 12px',fontSize:11}} onClick={onBack}>← НАЗАД</button>
+        <span style={{fontFamily:"'Bebas Neue',cursive",fontSize:20,letterSpacing:3,color:'#FFFDF8',marginLeft:8}}>MARATHON SKILLS 2026</span>
       </nav>
       <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center'}}>
-        <div style={{background:'#1E1E36',border:'1px solid #2D2D46',borderRadius:6,width:'min(420px,90vw)',padding:'36px 36px 32px'}}>
-          <div style={{fontSize:20,fontWeight:700,color:'#F4A33C',textAlign:'center',marginBottom:10}}>Форма авторизации</div>
-          <div style={{fontSize:10,color:'#8C8CA5',textAlign:'center',marginBottom:24}}>Пожалуйста, авторизуйтесь в системе.</div>
-          {[['Login',login,setLogin,'text'],['Password',pass,setPass,'password']].map(([lbl,val,setter,type])=>(
-            <div key={lbl} style={{display:'grid',gridTemplateColumns:'100px 1fr',alignItems:'center',gap:8,marginBottom:12}}>
-              <label style={{color:'#8C8CA5',textAlign:'right',paddingRight:12}}>{lbl}:</label>
-              <input style={{...inputStyle,height:32}} type={type} value={val} onChange={e=>setter(e.target.value)} onKeyDown={e=>e.key==='Enter'&&doLogin()}/>
+        <div style={{background:'#FFFDF8',border:'3px solid #0A0A0A',width:'min(380px,90vw)',padding:'36px 36px 32px',boxShadow:'8px 8px 0 #D62828'}}>
+          <div style={{fontFamily:"'Bebas Neue',cursive",fontSize:26,letterSpacing:2,color:'#0A0A0A',textAlign:'center',marginBottom:4}}>ВХОД ДЛЯ АДМИНИСТРАТОРА</div>
+          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:'#888',textAlign:'center',marginBottom:24,letterSpacing:1}}>ОГРАНИЧЕННЫЙ ДОСТУП</div>
+          {[['Логин',login,setLogin,'text'],['Пароль',pass,setPass,'password']].map(([lbl,val,setter,type])=>(
+            <div key={lbl} style={{marginBottom:14}}>
+              <div style={{fontFamily:"'Oswald',sans-serif",fontSize:10,letterSpacing:2,color:'#888',textTransform:'uppercase',marginBottom:4}}>{lbl}</div>
+              <input style={inputS} type={type} value={val} onChange={e=>setter(e.target.value)} onKeyDown={e=>e.key==='Enter'&&doLogin()}/>
             </div>
           ))}
-          {err && <div style={{color:'#E85D04',fontSize:11,textAlign:'center',marginBottom:12}}>{err}</div>}
+          {err && <div style={{color:'#D62828',fontSize:12,textAlign:'center',marginBottom:12,fontFamily:"'Inter',sans-serif"}}>{err}</div>}
           <div style={{display:'flex',gap:10,justifyContent:'center'}}>
-            <button style={{...btnOrange,height:36,padding:'0 24px'}} onClick={doLogin}>Login</button>
-            <button style={{...btnDark,height:36,padding:'0 20px'}} onClick={onBack}>Cancel</button>
+            <button style={{...btnRed,height:42,padding:'0 28px'}} onClick={doLogin}>ВОЙТИ</button>
+            <button style={{...btnOutline,height:42,padding:'0 20px'}} onClick={onBack}>ОТМЕНА</button>
           </div>
         </div>
       </div>
@@ -561,7 +623,6 @@ function AdminLoginPage({ onBack, onLogin }) {
   )
 }
 
-// ── USERS TABLE ───────────────────────────────────────────────────
 function UsersPage({ participants, isAdmin, onBack, onProfile, onEdit, onDelete, onBMI, onExport, onImport, loading }) {
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('Все роли')
@@ -584,54 +645,72 @@ function UsersPage({ participants, isAdmin, onBack, onProfile, onEdit, onDelete,
   const paged = list.slice((page-1)*PER_PAGE, page*PER_PAGE)
 
   return (
-    <div style={{display:'flex',flexDirection:'column',height:'100vh'}}>
-      <nav style={{background:'#1C1C33',borderBottom:'2px solid #E85D04',height:58,display:'flex',alignItems:'center',padding:'0 14px',gap:8,flexShrink:0,flexWrap:'wrap'}}>
-        <button style={btnNav} onClick={onBack}>← Назад</button>
-        <span style={{fontSize:12,fontWeight:700,marginLeft:6}}>MARATHON SKILLS 2026</span>
-        <div style={{marginLeft:'auto',display:'flex',gap:6}}>
+    <div style={{display:'flex',flexDirection:'column',height:'100vh',background:'#F5F0E8'}}>
+      <nav style={{background:'#0A0A0A',height:58,display:'flex',alignItems:'center',padding:'0 20px',gap:10,flexShrink:0,flexWrap:'wrap'}}>
+        <button style={{...btnGhost,height:30,padding:'0 12px',fontSize:11,border:'1px solid #D62828'}} onClick={onBack}>← НАЗАД</button>
+        <span style={{fontFamily:"'Bebas Neue',cursive",fontSize:18,letterSpacing:3,color:'#FFFDF8',marginLeft:8}}>MARATHON SKILLS 2026</span>
+        <div style={{marginLeft:'auto',display:'flex',gap:8}}>
           {isAdmin && <>
-            <button style={{...btnGreen,height:32,fontSize:10}} onClick={onExport}>⬇ CSV</button>
-            <button style={{...btnBlue,height:32,fontSize:10}} onClick={onImport}>⬆ Импорт</button>
-            <button style={{...btnOrange,height:32,fontSize:11}} onClick={()=>onEdit(null)}>✚ Добавить</button>
+            <button style={{...btnGreen,height:30,fontSize:11}} onClick={onExport}>↓ CSV</button>
+            <button style={{...btnBlue2,height:30,fontSize:11}} onClick={onImport}>↑ ИМПОРТ</button>
+            <button style={{...btnRed,height:30,fontSize:11}} onClick={()=>onEdit(null)}>+ ДОБАВИТЬ</button>
           </>}
         </div>
       </nav>
 
-      <div style={{background:'#1E1E36',borderBottom:'2px solid #E85D04',padding:16}}>
-        <div style={{fontSize:17,fontWeight:700,color:'#F4A33C',marginBottom:10}}>Список зарегистрированных участников</div>
+      <div style={{background:'#FFFDF8',borderBottom:'2px solid #E0DAD0',padding:'14px 20px'}}>
+        <div style={{fontFamily:"'Bebas Neue',cursive",fontSize:20,letterSpacing:2,color:'#0A0A0A',marginBottom:10}}>
+          СПИСОК УЧАСТНИКОВ
+        </div>
         <div style={{display:'flex',flexWrap:'wrap',gap:10,alignItems:'center'}}>
-          <span style={{color:'#8C8CA5'}}>Роль:</span>
-          <select style={{...selectStyle,width:'auto',height:28,padding:'0 8px'}} value={roleFilter} onChange={e=>{setRoleFilter(e.target.value);setPage(1)}}><option>Все роли</option><option>Бегун</option><option>Координатор</option></select>
-          <span style={{color:'#8C8CA5'}}>Сортировка:</span>
-          <select style={{...selectStyle,width:'auto',height:28,padding:'0 8px'}} value={sort} onChange={e=>setSort(e.target.value)}>{['По имени','По фамилии','По Email','По роли','По стране'].map(o=><option key={o}>{o}</option>)}</select>
-          <span style={{color:'#8C8CA5'}}>Поиск:</span>
-          <input style={{...inputStyle,width:180,height:28}} placeholder="Поиск по имени, email..." value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}}/>
+          <div>
+            <div style={{fontFamily:"'Oswald',sans-serif",fontSize:9,letterSpacing:2,color:'#888',textTransform:'uppercase',marginBottom:4}}>Роль</div>
+            <select style={{...selectS,width:'auto',height:32,padding:'0 8px'}} value={roleFilter} onChange={e=>{setRoleFilter(e.target.value);setPage(1)}}>
+              <option>Все роли</option><option>Бегун</option><option>Координатор</option>
+            </select>
+          </div>
+          <div>
+            <div style={{fontFamily:"'Oswald',sans-serif",fontSize:9,letterSpacing:2,color:'#888',textTransform:'uppercase',marginBottom:4}}>Сортировка</div>
+            <select style={{...selectS,width:'auto',height:32,padding:'0 8px'}} value={sort} onChange={e=>setSort(e.target.value)}>
+              {['По имени','По фамилии','По Email','По роли','По стране'].map(o=><option key={o}>{o}</option>)}
+            </select>
+          </div>
+          <div style={{flex:1,minWidth:200}}>
+            <div style={{fontFamily:"'Oswald',sans-serif",fontSize:9,letterSpacing:2,color:'#888',textTransform:'uppercase',marginBottom:4}}>Поиск</div>
+            <input style={{...inputS,height:32}} placeholder="Имя, фамилия, email..." value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}}/>
+          </div>
         </div>
       </div>
 
       <div style={{flex:1,overflowY:'auto'}}>
-        {loading ? <div style={{textAlign:'center',padding:40,color:'#8C8CA5'}}>Загрузка...</div> : (
+        {loading ? <div style={{textAlign:'center',padding:40,color:'#888',fontFamily:"'Oswald',sans-serif",letterSpacing:2}}>ЗАГРУЗКА...</div> : (
           <table style={{width:'100%',borderCollapse:'collapse'}}>
             <thead>
-              <tr>{['#','Имя','Фамилия','Email','Страна','ИМТ','Роль'].map(h=>(
-                <th key={h} style={{background:'#18183A',color:'#8C8CA5',fontWeight:600,fontSize:10,padding:'8px 10px',textAlign:'left',position:'sticky',top:0,borderBottom:'2px solid #2D2D46'}}>{h}</th>
-              ))}
-              {isAdmin && <><th style={{background:'#18183A',width:46,position:'sticky',top:0,borderBottom:'2px solid #2D2D46'}}/><th style={{background:'#18183A',width:46,position:'sticky',top:0,borderBottom:'2px solid #2D2D46'}}/></>}
+              <tr style={{background:'#0A0A0A'}}>
+                {['#','Имя','Фамилия','Email','Страна','ИМТ','Роль'].map(h=>(
+                  <th key={h} style={{color:'#888',fontFamily:"'Oswald',sans-serif",fontWeight:400,fontSize:10,letterSpacing:2,textTransform:'uppercase',padding:'10px 14px',textAlign:'left',borderBottom:'none'}}>{h}</th>
+                ))}
+                {isAdmin && <><th style={{background:'#0A0A0A',width:44}}/><th style={{background:'#0A0A0A',width:44}}/></>}
               </tr>
             </thead>
             <tbody>
               {paged.map((p,i)=>(
-                <tr key={p.id} style={{borderBottom:'1px solid #1E1E3A',cursor:'pointer'}} onClick={()=>onProfile(p)}>
-                  <td style={{padding:'7px 10px',fontSize:11,color:'#8C8CA5'}}>{(page-1)*PER_PAGE+i+1}</td>
-                  <td style={{padding:'7px 10px',fontSize:11}}>{p.name}</td>
-                  <td style={{padding:'7px 10px',fontSize:11}}>{p.surname}</td>
-                  <td style={{padding:'7px 10px',fontSize:11,color:'#2196F3'}}>{p.email}</td>
-                  <td style={{padding:'7px 10px',fontSize:11}}>{p.country||'—'}</td>
-                  <td style={{padding:'7px 10px',fontSize:11,color:p.bmi?bmiColor(p.bmi):'#8C8CA5'}}>{p.bmi?p.bmi.toFixed(1):'—'}</td>
-                  <td style={{padding:'7px 10px',fontSize:11,color:p.role==='Бегун'?'rgb(120,200,255)':'#6C63FF'}}>{p.role}</td>
+                <tr key={p.id} style={{borderBottom:'1px solid #E0DAD0',cursor:'pointer',background:i%2===0?'#FFFDF8':'#F5F0E8'}}
+                  onMouseEnter={e=>e.currentTarget.style.background='#EDE7DA'}
+                  onMouseLeave={e=>e.currentTarget.style.background=i%2===0?'#FFFDF8':'#F5F0E8'}
+                  onClick={()=>onProfile(p)}>
+                  <td style={{padding:'9px 14px',fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:'#888'}}>{(page-1)*PER_PAGE+i+1}</td>
+                  <td style={{padding:'9px 14px',fontFamily:"'Oswald',sans-serif",fontSize:13,fontWeight:600,letterSpacing:0.5}}>{p.name}</td>
+                  <td style={{padding:'9px 14px',fontFamily:"'Oswald',sans-serif",fontSize:13,fontWeight:600,letterSpacing:0.5}}>{p.surname}</td>
+                  <td style={{padding:'9px 14px',fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:'#1D3557'}}>{p.email}</td>
+                  <td style={{padding:'9px 14px',fontFamily:"'Inter',sans-serif",fontSize:12}}>{p.country||'—'}</td>
+                  <td style={{padding:'9px 14px',fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:p.bmi?bmiColor(p.bmi):'#E0DAD0',fontWeight:700}}>{p.bmi?p.bmi.toFixed(1):'—'}</td>
+                  <td style={{padding:'9px 14px'}}>
+                    <span style={{fontFamily:"'Oswald',sans-serif",fontSize:10,letterSpacing:1,textTransform:'uppercase',color:p.role==='Бегун'?'#1D3557':'#6B3FA0',background:p.role==='Бегун'?'#E8F0F8':'#F3EDFF',padding:'2px 8px'}}>{p.role}</span>
+                  </td>
                   {isAdmin && <>
-                    <td style={{padding:'7px 4px'}} onClick={e=>{e.stopPropagation();onEdit(p)}}><button style={{background:'#23233E',color:'#fff',border:'none',borderRadius:3,height:22,padding:'0 6px',cursor:'pointer',fontSize:11}}>✏</button></td>
-                    <td style={{padding:'7px 4px'}} onClick={e=>{e.stopPropagation();onDelete(p)}}><button style={{background:'#3C1919',color:'#fff',border:'none',borderRadius:3,height:22,padding:'0 6px',cursor:'pointer',fontSize:11}}>🗑</button></td>
+                    <td style={{padding:'6px 4px'}} onClick={e=>{e.stopPropagation();onEdit(p)}}><button style={{background:'#F5F0E8',color:'#1A1A1A',border:'1px solid #E0DAD0',height:26,padding:'0 8px',cursor:'pointer',fontFamily:"'Oswald',sans-serif",fontSize:10,letterSpacing:1}}>РЕД</button></td>
+                    <td style={{padding:'6px 4px'}} onClick={e=>{e.stopPropagation();onDelete(p)}}><button style={{background:'#FFF0F0',color:'#D62828',border:'1px solid #FFCDD2',height:26,padding:'0 8px',cursor:'pointer',fontFamily:"'Oswald',sans-serif",fontSize:10,letterSpacing:1}}>УДЛ</button></td>
                   </>}
                 </tr>
               ))}
@@ -640,12 +719,12 @@ function UsersPage({ participants, isAdmin, onBack, onProfile, onEdit, onDelete,
         )}
       </div>
 
-      <div style={{background:'#1E1E36',borderTop:'1px solid #23233E',height:42,display:'flex',alignItems:'center',padding:'0 12px',flexShrink:0}}>
-        <span style={{color:'#8C8CA5',fontSize:10}}>Всего: {list.length} участников</span>
-        <div style={{display:'flex',alignItems:'center',gap:8,margin:'0 auto'}}>
-          <button style={{...btnDark,width:56,height:26,fontSize:11}} disabled={page<=1} onClick={()=>setPage(p=>p-1)}>◀</button>
-          <span style={{color:'#8C8CA5',fontSize:10,minWidth:80,textAlign:'center'}}>Стр. {page} / {pages}</span>
-          <button style={{...btnDark,width:56,height:26,fontSize:11}} disabled={page>=pages} onClick={()=>setPage(p=>p+1)}>▶</button>
+      <div style={{background:'#FFFDF8',borderTop:'2px solid #0A0A0A',height:48,display:'flex',alignItems:'center',padding:'0 20px',flexShrink:0}}>
+        <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:'#888'}}>ВСЕГО: {list.length}</span>
+        <div style={{display:'flex',alignItems:'center',gap:10,margin:'0 auto'}}>
+          <button style={{...btnOutline,width:60,height:30,fontSize:11,padding:0,justifyContent:'center'}} disabled={page<=1} onClick={()=>setPage(p=>p-1)}>◀</button>
+          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:'#888',minWidth:80,textAlign:'center'}}>{page} / {pages}</span>
+          <button style={{...btnOutline,width:60,height:30,fontSize:11,padding:0,justifyContent:'center'}} disabled={page>=pages} onClick={()=>setPage(p=>p+1)}>▶</button>
         </div>
       </div>
       <TimerBar/>
@@ -653,9 +732,6 @@ function UsersPage({ participants, isAdmin, onBack, onProfile, onEdit, onDelete,
   )
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  MAIN PAGE
-// ══════════════════════════════════════════════════════════════════
 export default function Home() {
   const { data: session, status } = useSession()
 
@@ -710,55 +786,59 @@ export default function Home() {
   const avgBMI  = bmis.length?(bmis.reduce((a,b)=>a+b,0)/bmis.length).toFixed(1):'—'
   const topCountry = (()=>{ const c={}; participants.forEach(p=>{if(p.country)c[p.country]=(c[p.country]||0)+1}); return Object.entries(c).sort((a,b)=>b[1]-a[1])[0]?.[0]||'—' })()
 
-  if (status==='loading') return <div style={{background:'#14142A',color:'#E8E8F5',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}>Загрузка...</div>
+  if (status==='loading') return <div style={{background:'#F5F0E8',color:'#0A0A0A',minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:"'Bebas Neue',cursive",fontSize:28,letterSpacing:4}}>ЗАГРУЗКА...</div>
 
-  // ── PUBLIC LANDING ────────────────────────────────────────────
   if (!session) {
     return (
-      <div style={{display:'flex',flexDirection:'column',minHeight:'100vh',background:'#14142A',fontFamily:"'Segoe UI', system-ui, sans-serif",color:'#E8E8F5'}}>
+      <div style={{display:'flex',flexDirection:'column',minHeight:'100vh',background:'#F5F0E8'}}>
         <Navbar session={null} isAdmin={false} onUsers={()=>{}} onRegister={()=>{}} onAdminLogin={()=>{}} onAdminLogout={()=>{}}/>
-        <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'40px 24px',textAlign:'center'}}>
-          <div style={{fontSize:64,marginBottom:16}}>🏃</div>
-          <div style={{fontSize:32,fontWeight:800,marginBottom:8,letterSpacing:1}}>MARATHON SKILLS</div>
-          <div style={{fontSize:16,color:'#E85D04',fontWeight:700,marginBottom:8}}>2026</div>
-          <div style={{fontSize:14,color:'#8C8CA5',marginBottom:4}}>42.195 КМ · 15 ИЮНЯ 2026 · АЛМАТЫ</div>
-          <div style={{fontSize:12,color:'#8C8CA5',marginBottom:40}}>Войдите через Google, чтобы зарегистрироваться на марафон</div>
-          <button onClick={()=>signIn('google',{callbackUrl:'/'})} style={{display:'inline-flex',alignItems:'center',gap:12,background:'#fff',color:'#1a1a2e',border:'none',borderRadius:8,padding:'14px 32px',fontSize:15,fontWeight:600,cursor:'pointer',boxShadow:'0 4px 20px rgba(0,0,0,0.4)',marginBottom:48}}>
-            <svg width="22" height="22" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-            Войти через Google
-          </button>
 
-          {/* AI Chat Button */}
-          <button onClick={()=>setAiChatOpen(true)} style={{display:'flex',alignItems:'center',gap:14,background:'linear-gradient(135deg,#1a1a3e,#252548)',border:'1px solid #E85D04',borderRadius:10,padding:'14px 18px',marginBottom:14,cursor:'pointer',maxWidth:700,width:'100%',textDecoration:'none'}}>
-            <div style={{width:44,height:44,borderRadius:'50%',background:'linear-gradient(135deg,#E85D04,#F4A33C)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0}}>🤖</div>
-            <div style={{flex:1,textAlign:'left'}}>
-              <div style={{fontSize:13,fontWeight:700,color:'#E8E8F5',marginBottom:3}}>Спроси ИИ-ассистента о марафоне</div>
-              <div style={{fontSize:10,color:'#8C8CA5'}}>Подготовка · Питание · ИМТ · Регистрация · Любые вопросы</div>
-            </div>
-            <div style={{background:'#E85D04',color:'#fff',borderRadius:6,padding:'6px 14px',fontSize:11,fontWeight:700,flexShrink:0}}>Чат →</div>
-          </button>
-
-          <a href="https://t.me/martthon_bot" target="_blank" rel="noopener noreferrer" style={{display:'flex',alignItems:'center',gap:14,background:'linear-gradient(135deg,#0d1f3c,#1a3a5c)',border:'1px solid #2196F3',borderRadius:10,padding:'14px 18px',marginBottom:20,textDecoration:'none',cursor:'pointer',maxWidth:700,width:'100%'}}>
-            <div style={{width:44,height:44,borderRadius:'50%',background:'#2196F3',display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0}}>✈️</div>
-            <div style={{flex:1,textAlign:'left'}}>
-              <div style={{fontSize:13,fontWeight:700,color:'#E8E8F5',marginBottom:3}}>Telegram-бот с ИИ-ассистентом</div>
-              <div style={{fontSize:10,color:'#8C8CA5'}}>Найди участника · Статистика · Зарегистрируйся · Спроси ИИ</div>
-            </div>
-            <div style={{background:'#2196F3',color:'#fff',borderRadius:6,padding:'6px 14px',fontSize:11,fontWeight:700,flexShrink:0}}>Открыть →</div>
-          </a>
-
-          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:12,maxWidth:700,width:'100%'}}>
-            {[['#E85D04','🏃 Марафон — испытание воли','Дистанция 42,195 км объединяет профессионалов и любителей в едином порыве выносливости.'],['#2196F3','💪 «Стена» на 30–35 км','В этот момент запасы гликогена истощаются. Преодоление — вопрос чистого упрямства.'],['#4CAF50','🌆 Города без машин','Уникальный шанс увидеть город иначе: пробежать по мостам под крики болельщиков.']].map(([color,title,desc])=>(
-              <div key={title} style={{display:'flex',alignItems:'stretch',background:'#1E1E36',border:'1px solid #28283E',borderRadius:8,overflow:'hidden',textAlign:'left'}}>
-                <div style={{width:4,flexShrink:0,background:color}}/>
-                <div style={{padding:'12px 14px'}}>
-                  <div style={{fontSize:12,fontWeight:700,marginBottom:4}}>{title}</div>
-                  <div style={{fontSize:10,color:'#8C8CA5',lineHeight:1.5}}>{desc}</div>
-                </div>
-              </div>
-            ))}
+        <div style={{background:'#0A0A0A',padding:'80px 24px 60px',textAlign:'center',position:'relative',overflow:'hidden'}}>
+          <div style={{position:'absolute',right:'-5%',top:'50%',transform:'translateY(-50%)',fontFamily:"'Bebas Neue',cursive",fontSize:'clamp(120px,20vw,260px)',color:'rgba(214,40,40,0.08)',lineHeight:1,userSelect:'none',pointerEvents:'none'}}>42</div>
+          <div style={{position:'relative',zIndex:1}}>
+            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,letterSpacing:4,color:'#D62828',textTransform:'uppercase',marginBottom:16}}>АЛМАТЫ · 15 ИЮНЯ 2026</div>
+            <div style={{fontFamily:"'Bebas Neue',cursive",fontSize:'clamp(52px,10vw,110px)',color:'#FFFDF8',lineHeight:.9,letterSpacing:4}}>MARATHON</div>
+            <div style={{fontFamily:"'Bebas Neue',cursive",fontSize:'clamp(52px,10vw,110px)',color:'#D62828',lineHeight:.9,letterSpacing:4}}>SKILLS</div>
+            <div style={{width:60,height:4,background:'#D62828',margin:'24px auto 24px'}}/>
+            <div style={{fontFamily:"'Oswald',sans-serif",fontSize:14,color:'#888',letterSpacing:2,textTransform:'uppercase'}}>42.195 КМ · ИСПЫТАНИЕ ВОЛИ И ДУХА</div>
           </div>
         </div>
+
+        <div style={{background:'#D62828',padding:'28px 24px',textAlign:'center'}}>
+          <div style={{fontFamily:"'Oswald',sans-serif",fontSize:13,letterSpacing:3,color:'rgba(255,255,255,.7)',textTransform:'uppercase',marginBottom:16}}>Войдите, чтобы зарегистрироваться</div>
+          <button onClick={()=>signIn('google',{callbackUrl:'/'})} style={{display:'inline-flex',alignItems:'center',gap:10,background:'#FFFDF8',color:'#0A0A0A',border:'none',padding:'14px 32px',fontFamily:"'Oswald',sans-serif",fontSize:15,letterSpacing:2,cursor:'pointer',textTransform:'uppercase',boxShadow:'4px 4px 0 rgba(0,0,0,.3)'}}>
+            <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+            Войти через Google
+          </button>
+        </div>
+
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',maxWidth:800,margin:'0 auto',width:'100%',borderBottom:'2px solid #E0DAD0'}}>
+          <button onClick={()=>setAiChatOpen(true)} style={{background:'#FFFDF8',border:'none',borderRight:'2px solid #E0DAD0',padding:'28px 24px',cursor:'pointer',textAlign:'left'}}>
+            <div style={{fontFamily:"'Bebas Neue',cursive",fontSize:20,letterSpacing:2,color:'#0A0A0A',marginBottom:6}}>ИИ-АССИСТЕНТ</div>
+            <div style={{fontFamily:"'Inter',sans-serif",fontSize:12,color:'#888',lineHeight:1.6}}>Подготовка, питание, ИМТ, вопросы о марафоне</div>
+            <div style={{fontFamily:"'Oswald',sans-serif",fontSize:11,letterSpacing:2,color:'#D62828',marginTop:10,textTransform:'uppercase'}}>Открыть чат →</div>
+          </button>
+          <a href="https://t.me/martthon_bot" target="_blank" rel="noopener noreferrer" style={{background:'#FFFDF8',padding:'28px 24px',textDecoration:'none',display:'block'}}>
+            <div style={{fontFamily:"'Bebas Neue',cursive",fontSize:20,letterSpacing:2,color:'#0A0A0A',marginBottom:6}}>TELEGRAM БОТ</div>
+            <div style={{fontFamily:"'Inter',sans-serif",fontSize:12,color:'#888',lineHeight:1.6}}>@martthon_bot · поиск участников, статистика, ИИ</div>
+            <div style={{fontFamily:"'Oswald',sans-serif",fontSize:11,letterSpacing:2,color:'#1D3557',marginTop:10,textTransform:'uppercase'}}>@martthon_bot →</div>
+          </a>
+        </div>
+
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(240px,1fr))',maxWidth:800,margin:'0 auto',width:'100%'}}>
+          {[
+            ['01','ДИСТАНЦИЯ','42,195 км объединяют профессионалов и любителей в едином порыве. Алматы открывает свои улицы для бегунов.'],
+            ['02','«СТЕНА»','На 30–35 км запасы гликогена истощаются. Здесь марафон только начинается — вопрос чистого упрямства.'],
+            ['03','ФИНИШ','Пересечь черту — значит победить себя. Это помнят всю жизнь.'],
+          ].map(([num,title,desc])=>(
+            <div key={num} style={{borderRight:'1px solid #E0DAD0',borderBottom:'1px solid #E0DAD0',padding:'28px 24px',background:'#FFFDF8'}}>
+              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:'#D62828',letterSpacing:2,marginBottom:8}}>{num}</div>
+              <div style={{fontFamily:"'Bebas Neue',cursive",fontSize:18,letterSpacing:2,color:'#0A0A0A',marginBottom:8}}>{title}</div>
+              <div style={{fontFamily:"'Inter',sans-serif",fontSize:12,color:'#888',lineHeight:1.7}}>{desc}</div>
+            </div>
+          ))}
+        </div>
+
         <TimerBar/>
         <AIChatWidget open={aiChatOpen} onClose={()=>setAiChatOpen(false)}/>
       </div>
@@ -793,66 +873,62 @@ export default function Home() {
     )
   }
 
-  // ── MAIN VIEW ─────────────────────────────────────────────────
   return (
-    <div style={{display:'flex',flexDirection:'column',minHeight:'100vh',background:'#14142A',fontFamily:"'Segoe UI', system-ui, sans-serif",color:'#E8E8F5'}}>
+    <div style={{display:'flex',flexDirection:'column',minHeight:'100vh',background:'#F5F0E8'}}>
       <Navbar onUsers={()=>setView('users')} onRegister={()=>{setEditTarget(null);setRegisterOpen(true)}} onAdminLogin={()=>setView('adminLogin')} session={session} isAdmin={isAdmin} onAdminLogout={()=>setIsAdmin(false)}/>
 
-      <div style={{flex:1,overflowY:'auto',padding:'16px 24px'}}>
-        <div style={{fontSize:20,fontWeight:700,color:'#F4A33C',textAlign:'center',marginBottom:14}}>Добро пожаловать в Marathon Skills 2026</div>
+      <div style={{background:'#0A0A0A',display:'grid',gridTemplateColumns:'repeat(5,1fr)',borderBottom:'3px solid #D62828'}}>
+        {[
+          [runners,'БЕГУНОВ'],
+          [coords,'КООРДИНАТОРОВ'],
+          [avgBMI,'СРЕДНИЙ ИМТ'],
+          [topCountry,'ТОП СТРАНА'],
+          [participants.length,'ВСЕГО'],
+        ].map(([val,lbl],i)=>(
+          <div key={lbl} style={{padding:'14px 16px',borderRight:i<4?'1px solid #1A1A1A':undefined,textAlign:'center'}}>
+            <div style={{fontFamily:"'Bebas Neue',cursive",fontSize:28,color:'#FFFDF8',letterSpacing:2,lineHeight:1}}>{val}</div>
+            <div style={{fontFamily:"'Oswald',sans-serif",fontSize:9,letterSpacing:2,color:'#888',textTransform:'uppercase',marginTop:4}}>{lbl}</div>
+          </div>
+        ))}
+      </div>
 
-        <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:6,height:96,marginBottom:12}}>
-          {[['🏃',runners,'#E85D04','Бегунов'],['📋',coords,'#6C63FF','Координаторов'],['📊',avgBMI,'#4CAF50','Средний ИМТ'],['🌍',topCountry,'#2196F3','Топ страна'],['👥',participants.length,'#9C27B0','Всего участников']].map(([icon,val,color,lbl])=>(
-            <div key={lbl} style={{background:'#1E1E36',border:'1px solid #2D2D46',borderRadius:6,position:'relative',overflow:'hidden',display:'flex',alignItems:'center',padding:'0 12px',gap:8}}>
-              <span style={{fontSize:20}}>{icon}</span>
-              <div><div style={{fontSize:18,fontWeight:700,color}}>{val}</div><div style={{fontSize:9,color:'#8C8CA5'}}>{lbl}</div></div>
-              <div style={{position:'absolute',bottom:0,left:8,right:8,height:3,borderRadius:'0 0 6px 6px',background:color}}/>
+      <div style={{flex:1,overflowY:'auto',padding:'28px 24px',maxWidth:900,margin:'0 auto',width:'100%'}}>
+        <div style={{marginBottom:24,paddingBottom:16,borderBottom:'2px solid #E0DAD0'}}>
+          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,letterSpacing:3,color:'#D62828',textTransform:'uppercase',marginBottom:8}}>ПАНЕЛЬ УПРАВЛЕНИЯ</div>
+          <div style={{fontFamily:"'Bebas Neue',cursive",fontSize:36,letterSpacing:3,color:'#0A0A0A',lineHeight:1}}>MARATHON SKILLS 2026</div>
+        </div>
+
+        <div style={{display:'flex',gap:10,marginBottom:24,flexWrap:'wrap'}}>
+          <button style={{...btnRed,height:44,fontSize:13,padding:'0 24px'}} onClick={()=>{setEditTarget(null);setRegisterOpen(true)}}>+ ЗАРЕГИСТРИРОВАТЬ</button>
+          <button style={{...btnOutline,height:44,fontSize:13,padding:'0 20px'}} onClick={()=>setView('users')}>ВСЕ УЧАСТНИКИ</button>
+          {isAdmin && <>
+            <button style={{...btnGreen,height:44,fontSize:13}} onClick={handleExport}>↓ ВЫГРУЗИТЬ CSV</button>
+            <button style={{...btnBlue2,height:44,fontSize:13}} onClick={()=>setImportOpen(true)}>↑ ИМПОРТ CSV</button>
+          </>}
+          <button style={{...btnBlack,height:44,fontSize:13}} onClick={()=>setAiChatOpen(true)}>ИИ-АССИСТЕНТ</button>
+        </div>
+
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:0,border:'2px solid #E0DAD0',marginBottom:20}}>
+          <button onClick={()=>setAiChatOpen(true)} style={{background:'#FFFDF8',border:'none',borderRight:'1px solid #E0DAD0',borderBottom:'1px solid #E0DAD0',padding:'22px 20px',cursor:'pointer',textAlign:'left'}}>
+            <div style={{fontFamily:"'Bebas Neue',cursive",fontSize:18,letterSpacing:2,color:'#0A0A0A',marginBottom:6}}>ИИ-АССИСТЕНТ</div>
+            <div style={{fontFamily:"'Inter',sans-serif",fontSize:12,color:'#888',lineHeight:1.6}}>Вопросы о подготовке, питании, ИМТ и регистрации</div>
+            <div style={{fontFamily:"'Oswald',sans-serif",fontSize:10,letterSpacing:2,color:'#D62828',marginTop:8,textTransform:'uppercase'}}>ОТКРЫТЬ ЧАТ →</div>
+          </button>
+          <a href="https://t.me/martthon_bot" target="_blank" rel="noopener noreferrer" style={{background:'#FFFDF8',borderBottom:'1px solid #E0DAD0',padding:'22px 20px',textDecoration:'none',display:'block'}}>
+            <div style={{fontFamily:"'Bebas Neue',cursive",fontSize:18,letterSpacing:2,color:'#0A0A0A',marginBottom:6}}>TELEGRAM БОТ</div>
+            <div style={{fontFamily:"'Inter',sans-serif",fontSize:12,color:'#888',lineHeight:1.6}}>@martthon_bot · поиск, статистика, ИИ</div>
+            <div style={{fontFamily:"'Oswald',sans-serif",fontSize:10,letterSpacing:2,color:'#1D3557',marginTop:8,textTransform:'uppercase'}}>@MARTTHON_BOT →</div>
+          </a>
+          {[
+            ['МАРАФОН — ИСПЫТАНИЕ ВОЛИ','42,195 км — дистанция, которая объединяет профессионалов и любителей. Алматы открывает свои улицы.'],
+            ['«СТЕНА» НА 30–35 КМ','Запасы гликогена истощаются. Дальше — только сила духа и тренировки.'],
+          ].map(([title,desc],i)=>(
+            <div key={title} style={{background:'#FFFDF8',padding:'22px 20px',borderRight:i===0?'1px solid #E0DAD0':undefined}}>
+              <div style={{fontFamily:"'Bebas Neue',cursive",fontSize:16,letterSpacing:1.5,color:'#0A0A0A',marginBottom:6}}>{title}</div>
+              <div style={{fontFamily:"'Inter',sans-serif",fontSize:12,color:'#888',lineHeight:1.6}}>{desc}</div>
             </div>
           ))}
         </div>
-
-        <div style={{height:140,borderRadius:10,overflow:'hidden',position:'relative',background:'linear-gradient(to right, rgba(232,93,4,.19), rgba(33,150,243,.06))',marginBottom:12}}>
-          <div style={{display:'flex',gap:0,position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-60%)',justifyContent:'center'}}>
-            {['🏃','🏅','🌍','🎽','⏱'].map(e=>(<div key={e} style={{background:'rgba(255,255,255,.08)',borderRadius:'50%',width:56,height:56,display:'flex',alignItems:'center',justifyContent:'center',fontSize:30,margin:'0 10px',border:'2px solid rgba(255,255,255,.15)'}}>{e}</div>))}
-          </div>
-          <div style={{position:'absolute',bottom:12,left:20,fontSize:16,fontWeight:700,opacity:.9}}>42.195 КМ &nbsp;·&nbsp; 15 ИЮНЯ 2026</div>
-        </div>
-
-        <div style={{display:'flex',gap:10,justifyContent:'center',marginBottom:12,flexWrap:'wrap'}}>
-          <button style={{...btnOrange,height:40,fontSize:12}} onClick={()=>{setEditTarget(null);setRegisterOpen(true)}}>✚ &nbsp;Зарегистрировать</button>
-          <button style={{...btnNav,height:40,fontSize:12}} onClick={()=>setView('users')}>👥 &nbsp;Все участники</button>
-          {isAdmin && <>
-            <button style={{...btnGreen,height:40,fontSize:12}} onClick={handleExport}>⬇ &nbsp;Выгрузить CSV</button>
-            <button style={{...btnBlue,height:40,fontSize:12}} onClick={()=>setImportOpen(true)}>⬆ &nbsp;Импорт CSV</button>
-          </>}
-          <button style={{...btnOrange,height:40,fontSize:12,background:'linear-gradient(135deg,#8B00FF,#E85D04)'}} onClick={()=>setAiChatOpen(true)}>🤖 &nbsp;ИИ-ассистент</button>
-        </div>
-
-        {/* AI Chat Banner */}
-        <button onClick={()=>setAiChatOpen(true)} style={{display:'flex',alignItems:'center',gap:14,background:'linear-gradient(135deg,#1a1a3e,#252548)',border:'1px solid #E85D04',borderRadius:10,padding:'14px 18px',marginBottom:10,cursor:'pointer',width:'100%',textAlign:'left'}}>
-          <div style={{width:40,height:40,borderRadius:'50%',background:'linear-gradient(135deg,#E85D04,#F4A33C)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0}}>🤖</div>
-          <div style={{flex:1}}>
-            <div style={{fontSize:12,fontWeight:700,color:'#E8E8F5',marginBottom:2}}>ИИ-ассистент марафона</div>
-            <div style={{fontSize:10,color:'#8C8CA5'}}>Задай вопрос о подготовке, питании, ИМТ или регистрации</div>
-          </div>
-          <div style={{background:'#E85D04',color:'#fff',borderRadius:6,padding:'5px 12px',fontSize:11,fontWeight:700,flexShrink:0}}>Открыть →</div>
-        </button>
-
-        <a href="https://t.me/martthon_bot" target="_blank" rel="noopener noreferrer" style={{display:'flex',alignItems:'center',gap:14,background:'linear-gradient(135deg,#0d1f3c,#1a3a5c)',border:'1px solid #2196F3',borderRadius:10,padding:'14px 18px',marginBottom:10,textDecoration:'none',cursor:'pointer'}}>
-          <div style={{width:40,height:40,borderRadius:'50%',background:'#2196F3',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0}}>✈️</div>
-          <div style={{flex:1}}>
-            <div style={{fontSize:12,fontWeight:700,color:'#E8E8F5',marginBottom:2}}>Telegram-бот с ИИ · @martthon_bot</div>
-            <div style={{fontSize:10,color:'#8C8CA5'}}>Найди участника · Статистика · Зарегистрируйся · Спроси ИИ</div>
-          </div>
-          <div style={{background:'#2196F3',color:'#fff',borderRadius:6,padding:'5px 12px',fontSize:11,fontWeight:700,flexShrink:0}}>Открыть →</div>
-        </a>
-
-        {[['#E85D04','🏃 Марафон — испытание воли','Дистанция 42,195 км объединяет профессионалов и любителей в едином порыве выносливости.'],['#2196F3','💪 «Стена» на 30–35 км','В этот момент запасы гликогена истощаются. Преодоление — вопрос чистого упрямства.'],['#4CAF50','🌆 Города без машин','Уникальный шанс увидеть город иначе: пробежать по мостам под крики болельщиков.']].map(([color,title,desc])=>(
-          <div key={title} style={{display:'flex',alignItems:'stretch',background:'#1E1E36',border:'1px solid #28283E',marginBottom:6}}>
-            <div style={{width:4,flexShrink:0,background:color}}/>
-            <div style={{padding:'10px 12px'}}><div style={{fontSize:12,fontWeight:700,marginBottom:4}}>{title}</div><div style={{fontSize:10,color:'#8C8CA5',lineHeight:1.4}}>{desc}</div></div>
-          </div>
-        ))}
       </div>
 
       <TimerBar/>
