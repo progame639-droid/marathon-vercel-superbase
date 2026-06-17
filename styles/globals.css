@@ -1,45 +1,35 @@
-@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800&display=swap');
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-:root {
-  --paper: #FBF9F4;
-  --paper-dim: #F1EDE2;
-  --ink: #171511;
-  --ink-soft: #5A5648;
-  --mute: #8A8579;
-  --line: #E2DCC8;
-  --lime: #C6FF3D;
-  --lime-deep: #9FDB14;
-  --coral: #FF4D2E;
-  --coral-deep: #DB3010;
-  --sky: #1B6EF3;
-  --violet: #6E3DFF;
-}
-
-html { background: var(--paper); }
+html { -webkit-font-smoothing: antialiased; }
 
 body {
-  font-family: 'Archivo', system-ui, sans-serif;
-  background: var(--paper);
-  color: var(--ink);
-  font-size: 15px;
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #F7F4EC;
+  color: #16140F;
+  font-size: 13px;
   min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
 }
 
-::selection { background: var(--lime); color: var(--ink); }
-
-button, input, select { font-family: inherit; }
-
-input::placeholder { color: var(--mute); }
-
 ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: var(--paper-dim); }
-::-webkit-scrollbar-thumb { background: var(--ink); border-radius: 0; }
+::-webkit-scrollbar-track { background: #EEEAE0; }
+::-webkit-scrollbar-thumb { background: #16140F; border: 2px solid #EEEAE0; }
 
-a { color: inherit; }
+input::placeholder { color: #A39E8C; }
 
-@media (prefers-reduced-motion: reduce) {
-  * { animation: none !important; transition: none !important; }
+input, select, button { font-family: inherit; }
+
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0L5 6L10 0' fill='%2316140F'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+@keyframes marqueeScroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
