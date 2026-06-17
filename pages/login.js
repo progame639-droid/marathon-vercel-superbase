@@ -13,26 +13,43 @@ export default function LoginPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#14142A',
+      background: 'var(--paper)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: "'Segoe UI', system-ui, sans-serif",
+      fontFamily: "'Archivo', system-ui, sans-serif",
+      padding: 20,
+      position: 'relative',
+      overflow: 'hidden',
     }}>
       <div style={{
-        background: '#1E1E36',
-        border: '1px solid #2D2D46',
-        borderRadius: 10,
-        padding: '48px 52px',
-        width: 'min(420px, 90vw)',
+        position: 'absolute', inset: 0,
+        backgroundImage: 'repeating-linear-gradient(90deg, var(--line) 0 2px, transparent 2px 64px)',
+        opacity: .5,
+      }}/>
+      <div style={{
+        background: '#fff',
+        border: '3px solid var(--ink)',
+        boxShadow: '10px 10px 0 var(--ink)',
+        padding: '52px 48px',
+        width: 'min(440px, 92vw)',
         textAlign: 'center',
+        position: 'relative',
       }}>
-        <div style={{ fontSize: 48, marginBottom: 8 }}>🏃</div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: '#E8E8F5', marginBottom: 4 }}>
-          MARATHON SKILLS
+        <div style={{
+          position: 'absolute', top: -18, left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--lime)', border: '3px solid var(--ink)', padding: '4px 16px',
+          fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700,
+          letterSpacing: '0.08em',
+        }}>BIB #2026</div>
+
+        <div style={{ fontFamily: "'Archivo Black', sans-serif", fontSize: 38, lineHeight: 1, marginTop: 12, marginBottom: 6, letterSpacing: '-0.02em' }}>
+          MARATHON<br/>SKILLS
         </div>
-        <div style={{ fontSize: 13, color: '#E85D04', marginBottom: 8, fontWeight: 700 }}>2026</div>
-        <div style={{ fontSize: 11, color: '#8C8CA5', marginBottom: 32 }}>
+        <div style={{ display: 'inline-block', background: 'var(--coral)', color: '#fff', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: 13, padding: '3px 10px', marginBottom: 18, transform: 'rotate(-1deg)' }}>
+          15.06.2026 · 42.195 KM
+        </div>
+        <div style={{ fontSize: 14, color: 'var(--ink-soft)', marginBottom: 32, lineHeight: 1.5 }}>
           Войдите, чтобы управлять участниками марафона
         </div>
 
@@ -42,20 +59,22 @@ export default function LoginPage() {
             display: 'inline-flex',
             alignItems: 'center',
             gap: 12,
-            background: '#fff',
-            color: '#1a1a2e',
-            border: 'none',
-            borderRadius: 6,
-            padding: '12px 28px',
-            fontSize: 14,
-            fontWeight: 600,
+            background: 'var(--ink)',
+            color: '#fff',
+            border: '3px solid var(--ink)',
+            borderRadius: 0,
+            padding: '14px 28px',
+            fontSize: 15,
+            fontWeight: 700,
             cursor: 'pointer',
-            transition: '.15s',
+            transition: '.12s',
             width: '100%',
             justifyContent: 'center',
+            textTransform: 'uppercase',
+            letterSpacing: '0.03em',
           }}
-          onMouseOver={e => e.currentTarget.style.background = '#f0f0f0'}
-          onMouseOut={e => e.currentTarget.style.background = '#fff'}
+          onMouseOver={e => { e.currentTarget.style.background = 'var(--lime)'; e.currentTarget.style.color = 'var(--ink)' }}
+          onMouseOut={e => { e.currentTarget.style.background = 'var(--ink)'; e.currentTarget.style.color = '#fff' }}
         >
           <svg width="20" height="20" viewBox="0 0 48 48">
             <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -67,10 +86,12 @@ export default function LoginPage() {
           Войти через Google
         </button>
 
-        <div style={{ marginTop: 24, fontSize: 10, color: '#8C8CA5' }}>
-          42.195 КМ · 15 ИЮНЯ 2026
+        <div style={{ marginTop: 26, fontSize: 11, color: 'var(--mute)', fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.05em' }}>
+          АЛМАТЫ · СТАРТ 09:00
         </div>
       </div>
     </div>
   )
 }
+EOF
+echo done
